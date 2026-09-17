@@ -23,201 +23,279 @@
   --foreground: #f3efe8;
 }
 
-html {
-  scroll-behavior: auto;
-}
-
+html { scroll-behavior: auto; }
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
-/* ── Scroll space ───────────────────────────────────────── */
-.morph-scroll-space {
-  height: 700vh;
+/* ── Horizontal wrapper ─────────────────────────────────── */
+.h-wrapper {
   position: relative;
-}
-
-/* ── Pinned stage ───────────────────────────────────────── */
-.morph-stage {
-  position: relative;
-  width: 100%;
-  height: 100dvh;
   overflow: hidden;
 }
 
-.morph-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: #0c0a08;
-}
-
-.morph-grain {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.04;
-  background-image:
-    radial-gradient(ellipse 70% 40% at 18% 0%, rgba(240, 162, 2, 0.2), transparent 50%),
-    radial-gradient(ellipse 50% 30% at 85% 80%, rgba(196, 185, 154, 0.1), transparent 45%);
-}
-
-/* ── Scrub progress ─────────────────────────────────────── */
-.morph-scrub {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 20;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.morph-scrub-fill {
-  height: 100%;
-  width: 100%;
-  transform: scaleX(0);
-  transform-origin: left center;
-  background: linear-gradient(90deg, var(--color-turquoise), var(--color-orange));
-}
-
-/* ── Phase label ────────────────────────────────────────── */
-.morph-phase-wrap {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 15;
-}
-
-.morph-phase {
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--color-orange);
-  padding: 0.35rem 0.85rem;
-  border: 1px solid color-mix(in oklab, var(--color-orange) 35%, transparent);
-  background: color-mix(in oklab, var(--color-orange) 6%, transparent);
-}
-
-/* ── Canvas ─────────────────────────────────────────────── */
-.morph-canvas {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  height: 100%;
+.h-track {
   display: flex;
-  flex-direction: column;
+  flex-wrap: nowrap;
+  will-change: transform;
+}
+
+/* ── Panels ─────────────────────────────────────────────── */
+.h-panel {
+  flex: 0 0 100vw;
+  width: 100vw;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: flex-start;
-  padding: 3rem 2rem 4rem;
-  max-width: 60rem;
-  margin: 0 auto;
-  gap: 1.25rem;
+  padding: 2.5rem 2rem;
+  position: relative;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
-  .morph-canvas {
-    padding: 3.5rem 3.5rem 4rem;
+  .h-panel {
+    padding: 3rem 4rem;
   }
 }
 
-/* ── Context text ───────────────────────────────────────── */
-.morph-context {
+/* Separator line between panels */
+.h-panel + .h-panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12%;
+  bottom: 12%;
+  width: 1px;
+  background: color-mix(in oklab, var(--color-ink) 8%, transparent);
+}
+
+.pan-inner {
+  max-width: 44rem;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 1.25rem;
 }
 
-.morph-ctx1 {
+.pan-inner-center {
+  align-items: center;
+  text-align: center;
+}
+
+/* ── Typography ─────────────────────────────────────────── */
+.pan-tag {
   font-family: var(--font-display);
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  font-weight: 500;
-  color: var(--color-ink);
+  font-size: 0.75rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-turquoise);
   margin: 0;
-  transition: opacity 0.2s ease;
 }
 
-.morph-ctx2 {
-  font-size: 0.85rem;
+.pan-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: var(--color-ink-muted);
   margin: 0;
-  transition: opacity 0.2s ease;
 }
 
-/* ── Big number center ──────────────────────────────────── */
-.morph-center {
-  position: relative;
-  margin: 0.5rem 0;
-}
-
-.morph-number {
-  display: flex;
-  align-items: baseline;
-  gap: 0.2em;
-  position: relative;
-  z-index: 2;
-}
-
-.morph-bignum {
-  font-family: var(--font-display);
-  font-size: clamp(5rem, 18vw, 13rem);
-  font-weight: 800;
-  line-height: 0.85;
-  letter-spacing: -0.05em;
+.pan-kicker-num {
   color: var(--color-orange);
   font-variant-numeric: tabular-nums;
 }
 
-.morph-unit {
+.pan-title {
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 4vw, 3.5rem);
-  font-weight: 600;
+  font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  margin: 0;
+  max-width: 18ch;
+}
+
+.pan-lead {
+  font-size: clamp(0.95rem, 1.5vw, 1.12rem);
+  line-height: 1.5;
   color: var(--color-ink-muted);
-  padding-bottom: 0.15em;
+  margin: 0;
+  max-width: 34rem;
 }
 
-/* Ring that appears at the climax */
-.morph-ring {
-  position: absolute;
-  inset: -1.25rem -1.75rem;
-  border: 2px solid color-mix(in oklab, var(--color-orange) 40%, transparent);
-  border-radius: 0.5rem;
-  z-index: 1;
-  opacity: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 0.35rem 0.65rem;
+.pan-note {
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+  margin: 0;
 }
 
-.morph-ring-label {
+.pan-foot {
   font-family: var(--font-display);
-  font-size: 0.6rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+.text-accent { color: var(--color-orange); }
+
+/* ── Hero panel ─────────────────────────────────────────── */
+.pan-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.pan-hero-em { color: var(--color-orange); }
+
+.pan-hero-sub {
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  color: var(--color-ink-muted);
+  max-width: 26rem;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.pan-hero-nums {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem 1.75rem;
+}
+
+.pan-hero-before, .pan-hero-after {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pan-hero-label {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.pan-hero-big {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.pan-hero-accent { color: var(--color-orange); }
+
+.pan-hero-unit {
+  font-size: 0.5em;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
+.hero-strike {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  background: color-mix(in oklab, var(--color-orange) 75%, transparent);
+  transform: scaleX(0);
+}
+
+.pan-hero-arrow {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-turquoise);
+  padding-bottom: 0.2rem;
+}
+
+.pan-hero-mult {
+  display: flex;
+  align-items: baseline;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.hero-mult-counter {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  font-weight: 800;
   color: var(--color-orange);
-  opacity: 0;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+}
+
+.pan-hero-mult-x {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.8rem);
+  font-weight: 700;
+  color: var(--color-orange);
+}
+
+.pan-hero-mult-label {
+  margin-left: 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.pan-scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+@media (min-width: 768px) {
+  .pan-scroll-hint { left: 4rem; }
+}
+
+.pan-scroll-arrow {
+  display: inline-block;
+  animation: arrow-bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes arrow-bounce {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
 }
 
 /* ── Pipeline ───────────────────────────────────────────── */
-.morph-pipe {
-  width: 100%;
-  max-width: 48rem;
-}
+.pipe-wrap { max-width: 40rem; }
 
-.morph-pipe-track {
+.pipe-track {
   height: 3px;
   background: color-mix(in oklab, var(--color-ink) 10%, transparent);
-  margin-bottom: 1rem;
-  position: relative;
+  margin-bottom: 1.25rem;
 }
 
-.morph-pipe-fill {
+.pipe-fill {
   height: 100%;
   width: 100%;
   transform: scaleX(0);
@@ -225,26 +303,23 @@ body {
   background: linear-gradient(90deg, var(--color-turquoise), var(--color-orange));
 }
 
-.morph-pipe-steps {
+.pipe-steps {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 @media (max-width: 640px) {
-  .morph-pipe-steps {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  .pipe-steps { grid-template-columns: 1fr; gap: 0.85rem; }
 }
 
-.morph-pipe-step {
+.pipe-step {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  opacity: 0.15;
 }
 
-.morph-pipe-code {
+.pipe-code {
   font-family: var(--font-display);
   font-size: 0.6rem;
   letter-spacing: 0.1em;
@@ -252,104 +327,209 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.morph-pipe-title {
+.pipe-name {
   font-family: var(--font-display);
-  font-size: clamp(0.72rem, 1.2vw, 0.88rem);
-  font-weight: 600;
+  font-size: clamp(0.78rem, 1.2vw, 0.9rem);
+  font-weight: 650;
   color: var(--color-ink);
   line-height: 1.2;
 }
 
-/* ── Volume bars ────────────────────────────────────────── */
-.morph-bars {
-  width: 100%;
-  max-width: 40rem;
+.pipe-desc {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-ink-muted);
+}
+
+/* ── Benchmark ──────────────────────────────────────────── */
+.bench-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
+  max-width: 38rem;
 }
 
-.morph-bar {
+.bench-row {
   display: grid;
-  grid-template-columns: 5rem 1fr auto auto;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent);
+}
+
+.bench-from, .bench-to {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.bench-to { text-align: right; }
+
+.bench-stage {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.bench-time { font-size: 0.78rem; color: var(--color-ink-muted); }
+
+.bench-arrow { color: var(--color-turquoise); font-size: 1rem; }
+
+.bench-delta {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.8vw, 2rem);
+  font-weight: 700;
+  color: var(--color-turquoise);
+}
+
+.bench-row.is-final .bench-delta { color: var(--color-orange); }
+
+.bench-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid color-mix(in oklab, var(--color-orange) 45%, transparent);
+}
+
+.bench-total-label {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.bench-total-val {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--color-orange);
+}
+
+/* ── Volume ─────────────────────────────────────────────── */
+.vol-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 36rem;
+}
+
+.vol-row {
+  display: grid;
+  grid-template-columns: 5rem 1fr auto;
   gap: 0.5rem 0.85rem;
   align-items: center;
-  opacity: 0;
 }
 
-@media (max-width: 500px) {
-  .morph-bar {
-    grid-template-columns: 3.5rem 1fr auto auto;
-  }
-}
-
-.morph-bar-label {
+.vol-label {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--color-ink);
 }
 
-.morph-bar-track {
+.vol-bar {
   height: 0.55rem;
   background: var(--color-navy-soft);
   overflow: hidden;
 }
 
-.morph-bar-fill {
+.vol-fill {
   height: 100%;
   width: 100%;
   transform: scaleX(0);
   transform-origin: left center;
-  background: linear-gradient(90deg, var(--color-turquoise), var(--color-orange));
+  background: linear-gradient(90deg, color-mix(in oklab, var(--color-turquoise) 60%, transparent), var(--color-turquoise));
 }
 
-.morph-bar:last-child .morph-bar-fill {
+.vol-row.is-peak .vol-fill {
   background: linear-gradient(90deg, var(--color-orange), var(--color-orange-soft));
 }
 
-.morph-bar-num {
+.vol-val {
+  display: flex;
+  align-items: baseline;
+  gap: 0.15rem;
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-turquoise);
-  font-variant-numeric: tabular-nums;
-  min-width: 2.5rem;
-  text-align: right;
+  min-width: 4.5rem;
+  justify-content: flex-end;
 }
 
-.morph-bar:last-child .morph-bar-num {
-  color: var(--color-orange);
-}
+.vol-row.is-peak .vol-val { color: var(--color-orange); }
 
-.morph-bar-unit {
-  font-size: 0.65rem;
+.vol-unit {
+  font-size: 0.6rem;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-ink-muted);
 }
 
-/* ── Closing cards ──────────────────────────────────────── */
-.morph-cards {
+/* ── Closing ────────────────────────────────────────────── */
+.close-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.05em;
+}
+
+.close-counter {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 18vw, 11rem);
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: var(--color-orange);
+  font-variant-numeric: tabular-nums;
+}
+
+.close-x {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 10vw, 6.5rem);
+  font-weight: 700;
+  color: var(--color-orange);
+}
+
+.close-tag {
+  font-size: clamp(1.05rem, 1.8vw, 1.4rem);
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.close-old {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--color-orange) 55%, transparent);
+  color: var(--color-ink-muted);
+}
+
+.close-cards {
   display: grid;
   gap: 1.5rem 2rem;
+  text-align: left;
   width: 100%;
-  max-width: 48rem;
-  opacity: 0;
+  max-width: 44rem;
 }
 
 @media (min-width: 768px) {
-  .morph-cards {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  .close-cards { grid-template-columns: repeat(3, 1fr); }
 }
 
-.morph-card {
+.close-card {
   padding-top: 0.75rem;
   border-top: 1px solid color-mix(in oklab, var(--color-turquoise) 28%, transparent);
 }
 
-.morph-card-k {
+.close-card-k {
   display: block;
   font-family: var(--font-display);
   font-size: 0.6rem;
@@ -359,7 +539,7 @@ body {
   margin-bottom: 0.45rem;
 }
 
-.morph-card-t {
+.close-card-t {
   font-family: var(--font-display);
   font-size: 0.95rem;
   font-weight: 650;
@@ -367,46 +547,86 @@ body {
   color: var(--color-ink);
 }
 
-.morph-card-b {
+.close-card-b {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--color-ink-muted);
 }
 
-.morph-footnote {
-  font-family: var(--font-display);
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-  margin: 0;
-  opacity: 0;
+/* ── Timeline bar ───────────────────────────────────────── */
+.tl-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 0 2rem 1rem;
+  pointer-events: none;
 }
 
-/* ── Scroll cue ─────────────────────────────────────────── */
-.morph-cue {
-  position: absolute;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 15;
+@media (min-width: 768px) {
+  .tl-bar { padding: 0 4rem 1.25rem; }
+}
+
+.tl-track {
+  height: 2px;
+  background: color-mix(in oklab, var(--color-ink) 10%, transparent);
+  margin-bottom: 0.65rem;
+}
+
+.tl-fill {
+  height: 100%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--color-turquoise), var(--color-orange));
+}
+
+.tl-dots {
   display: flex;
+  justify-content: space-between;
+}
+
+.tl-dot {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.tl-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-ink-muted);
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.tl-dot.is-active .tl-pip {
+  background: var(--color-orange);
+  border-color: var(--color-orange);
+  box-shadow: 0 0 8px rgba(240, 162, 2, 0.4);
+}
+
+.tl-dot.is-past .tl-pip {
+  background: var(--color-turquoise);
+  border-color: var(--color-turquoise);
+}
+
+.tl-label {
   font-family: var(--font-display);
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-ink-muted);
+  transition: color 0.3s ease;
 }
 
-.morph-cue-arrow {
-  display: inline-block;
-  animation: cue-bounce 1.2s ease-in-out infinite;
-}
-
-@keyframes cue-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(5px); }
-}
+.tl-dot.is-active .tl-label { color: var(--color-orange); }
