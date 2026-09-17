@@ -72,160 +72,241 @@ export default function Page() {
         },
       })
 
-      // Per-panel entrance animations
+      // Per-panel entrance/exit animations with bounce
       panels.forEach((panel) => {
         const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
-        gsap.set(els, { opacity: 0, y: 28 })
+        gsap.set(els, { opacity: 0, y: 40, scale: 0.94 })
 
         ScrollTrigger.create({
           trigger: panel,
           containerAnimation: hScroll,
-          start: 'left 80%',
+          start: 'left 85%',
+          end: 'right -10%',
           onEnter: () => {
             gsap.to(els, {
               opacity: 1,
               y: 0,
-              duration: 0.65,
-              stagger: 0.08,
-              ease: 'power3.out',
+              scale: 1,
+              duration: 0.75,
+              stagger: 0.09,
+              ease: 'back.out(1.4)',
+              overwrite: true,
             })
           },
-          once: true,
+          onLeave: () => {
+            gsap.to(els, {
+              opacity: 0,
+              y: -30,
+              scale: 0.96,
+              duration: 0.4,
+              stagger: 0.03,
+              ease: 'power2.in',
+              overwrite: true,
+            })
+          },
+          onEnterBack: () => {
+            gsap.to(els, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.75,
+              stagger: 0.09,
+              ease: 'back.out(1.4)',
+              overwrite: true,
+            })
+          },
+          onLeaveBack: () => {
+            gsap.to(els, {
+              opacity: 0,
+              y: 40,
+              scale: 0.94,
+              duration: 0.4,
+              stagger: 0.03,
+              ease: 'power2.in',
+              overwrite: true,
+            })
+          },
         })
       })
 
+      // Helper: animate counters with bounce ease
+      function counterUp(el: HTMLElement, target: number, duration = 1.0, delay = 0) {
+        const o = { v: 0 }
+        gsap.to(o, {
+          v: target,
+          duration,
+          delay,
+          ease: 'power2.out',
+          onUpdate: () => {
+            el.textContent = target < 10
+              ? o.v.toFixed(1)
+              : Math.round(o.v).toLocaleString('es-ES')
+          },
+        })
+      }
+
+      function resetCounter(el: HTMLElement) {
+        el.textContent = '0'
+      }
+
       // Hero counter
+      function playHero() {
+        const el = document.querySelector<HTMLElement>('.hero-sec-counter')
+        if (el) counterUp(el, 15, 1.0)
+        const multEl = document.querySelector<HTMLElement>('.hero-mult-counter')
+        if (multEl) counterUp(multEl, 2800, 1.4, 0.3)
+        gsap.fromTo('.hero-strike', { scaleX: 0 }, { scaleX: 1, duration: 0.5, delay: 0.6, ease: 'back.out(2)', transformOrigin: 'left' })
+      }
+
+      function resetHero() {
+        const el = document.querySelector<HTMLElement>('.hero-sec-counter')
+        const multEl = document.querySelector<HTMLElement>('.hero-mult-counter')
+        if (el) resetCounter(el)
+        if (multEl) resetCounter(multEl)
+        gsap.set('.hero-strike', { scaleX: 0 })
+      }
+
       ScrollTrigger.create({
         trigger: '.h-panel-hero',
         containerAnimation: hScroll,
-        start: 'left 90%',
-        once: true,
-        onEnter: () => {
-          const el = document.querySelector<HTMLElement>('.hero-sec-counter')
-          if (!el) return
-          const obj = { v: 0 }
-          gsap.to(obj, {
-            v: 15,
-            duration: 1.0,
-            ease: 'power2.out',
-            onUpdate: () => { el.textContent = Math.round(obj.v).toString() },
-          })
-          const multEl = document.querySelector<HTMLElement>('.hero-mult-counter')
-          if (multEl) {
-            const m = { v: 0 }
-            gsap.to(m, {
-              v: 2800,
-              duration: 1.4,
-              delay: 0.3,
-              ease: 'power2.out',
-              onUpdate: () => { multEl.textContent = Math.round(m.v).toLocaleString('es-ES') },
-            })
-          }
-          gsap.fromTo('.hero-strike', { scaleX: 0 }, { scaleX: 1, duration: 0.5, delay: 0.6, ease: 'power2.inOut', transformOrigin: 'left' })
-        },
+        start: 'left 85%',
+        end: 'right -10%',
+        onEnter: playHero,
+        onEnterBack: playHero,
+        onLeave: resetHero,
+        onLeaveBack: resetHero,
       })
 
       // Pipeline fill
+      function playPipe() {
+        const steps = gsap.utils.toArray<HTMLElement>('.pipe-step')
+        const fill = document.querySelector<HTMLElement>('.pipe-fill')
+        steps.forEach((step, i) => {
+          gsap.to(step, { opacity: 1, y: 0, scale: 1, duration: 0.5, delay: i * 0.12, ease: 'back.out(1.6)', overwrite: true })
+        })
+        if (fill) gsap.to(fill, { scaleX: 1, duration: 1.6, delay: 0.15, ease: 'power3.out' })
+      }
+
+      function resetPipe() {
+        const steps = gsap.utils.toArray<HTMLElement>('.pipe-step')
+        const fill = document.querySelector<HTMLElement>('.pipe-fill')
+        gsap.set(steps, { opacity: 0, y: 12, scale: 0.95 })
+        if (fill) gsap.set(fill, { scaleX: 0 })
+      }
+
       ScrollTrigger.create({
         trigger: '.h-panel-pipe',
         containerAnimation: hScroll,
-        start: 'left 70%',
-        once: true,
-        onEnter: () => {
-          const steps = gsap.utils.toArray<HTMLElement>('.pipe-step')
-          const fill = document.querySelector<HTMLElement>('.pipe-fill')
-          steps.forEach((step, i) => {
-            gsap.to(step, { opacity: 1, y: 0, duration: 0.45, delay: i * 0.15, ease: 'power3.out' })
-          })
-          if (fill) {
-            gsap.to(fill, { scaleX: 1, duration: 1.8, delay: 0.2, ease: 'power3.out' })
-          }
-        },
+        start: 'left 75%',
+        end: 'right -10%',
+        onEnter: playPipe,
+        onEnterBack: playPipe,
+        onLeave: resetPipe,
+        onLeaveBack: resetPipe,
       })
 
       // Benchmark counters
+      function playBench() {
+        gsap.utils.toArray<HTMLElement>('.bench-row').forEach((row, i) => {
+          const numEl = row.querySelector<HTMLElement>('.bench-num')
+          const target = Number(numEl?.dataset.target || '0')
+          gsap.fromTo(row,
+            { opacity: 0, x: -24, scale: 0.95 },
+            { opacity: 1, x: 0, scale: 1, duration: 0.55, delay: i * 0.18, ease: 'back.out(1.4)' }
+          )
+          if (numEl) counterUp(numEl, target, 0.8, i * 0.18 + 0.12)
+        })
+        const totalEl = document.querySelector<HTMLElement>('.bench-total-counter')
+        if (totalEl) counterUp(totalEl, 2800, 1.3, 0.7)
+      }
+
+      function resetBench() {
+        gsap.utils.toArray<HTMLElement>('.bench-row').forEach((row) => {
+          gsap.set(row, { opacity: 0, x: -24, scale: 0.95 })
+          const numEl = row.querySelector<HTMLElement>('.bench-num')
+          if (numEl) resetCounter(numEl)
+        })
+        const totalEl = document.querySelector<HTMLElement>('.bench-total-counter')
+        if (totalEl) resetCounter(totalEl)
+      }
+
       ScrollTrigger.create({
         trigger: '.h-panel-bench',
         containerAnimation: hScroll,
-        start: 'left 65%',
-        once: true,
-        onEnter: () => {
-          gsap.utils.toArray<HTMLElement>('.bench-row').forEach((row, i) => {
-            const numEl = row.querySelector<HTMLElement>('.bench-num')
-            const target = Number(numEl?.dataset.target || '0')
-            gsap.fromTo(row, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5, delay: i * 0.2 })
-            if (numEl) {
-              const o = { v: 0 }
-              gsap.to(o, {
-                v: target,
-                duration: 0.8,
-                delay: i * 0.2 + 0.15,
-                onUpdate: () => { numEl.textContent = Math.round(o.v).toString() },
-              })
-            }
-          })
-          const totalEl = document.querySelector<HTMLElement>('.bench-total-counter')
-          if (totalEl) {
-            const o = { v: 0 }
-            gsap.to(o, {
-              v: 2800,
-              duration: 1.3,
-              delay: 0.8,
-              ease: 'power2.out',
-              onUpdate: () => { totalEl.textContent = Math.round(o.v).toLocaleString('es-ES') },
-            })
-          }
-        },
+        start: 'left 70%',
+        end: 'right -10%',
+        onEnter: playBench,
+        onEnterBack: playBench,
+        onLeave: resetBench,
+        onLeaveBack: resetBench,
       })
 
       // Volume bars
+      function playVol() {
+        gsap.utils.toArray<HTMLElement>('.vol-row').forEach((row, i) => {
+          const fill = row.querySelector<HTMLElement>('.vol-fill')
+          const numEl = row.querySelector<HTMLElement>('.vol-num')
+          const target = Number(fill?.dataset.pct || '0')
+          const value = Number(numEl?.dataset.val || '0')
+          gsap.fromTo(row,
+            { opacity: 0, x: -18, scale: 0.96 },
+            { opacity: 1, x: 0, scale: 1, duration: 0.5, delay: i * 0.1, ease: 'back.out(1.4)' }
+          )
+          if (fill) gsap.to(fill, { scaleX: target / 100, duration: 1.0, delay: i * 0.1 + 0.08, ease: 'power3.out' })
+          if (numEl) counterUp(numEl, value, 1.0, i * 0.1 + 0.1)
+        })
+      }
+
+      function resetVol() {
+        gsap.utils.toArray<HTMLElement>('.vol-row').forEach((row) => {
+          const fill = row.querySelector<HTMLElement>('.vol-fill')
+          const numEl = row.querySelector<HTMLElement>('.vol-num')
+          gsap.set(row, { opacity: 0, x: -18, scale: 0.96 })
+          if (fill) gsap.set(fill, { scaleX: 0 })
+          if (numEl) resetCounter(numEl)
+        })
+      }
+
       ScrollTrigger.create({
         trigger: '.h-panel-vol',
         containerAnimation: hScroll,
-        start: 'left 65%',
-        once: true,
-        onEnter: () => {
-          gsap.utils.toArray<HTMLElement>('.vol-row').forEach((row, i) => {
-            const fill = row.querySelector<HTMLElement>('.vol-fill')
-            const numEl = row.querySelector<HTMLElement>('.vol-num')
-            const target = Number(fill?.dataset.pct || '0')
-            const value = Number(numEl?.dataset.val || '0')
-            gsap.fromTo(row, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.45, delay: i * 0.12 })
-            if (fill) gsap.to(fill, { scaleX: target / 100, duration: 1.0, delay: i * 0.12 + 0.1, ease: 'power3.out' })
-            if (numEl) {
-              const o = { v: 0 }
-              gsap.to(o, {
-                v: value,
-                duration: 1.0,
-                delay: i * 0.12 + 0.12,
-                ease: 'power2.out',
-                onUpdate: () => { numEl.textContent = o.v < 10 ? o.v.toFixed(1) : Math.round(o.v).toString() },
-              })
-            }
-          })
-        },
+        start: 'left 70%',
+        end: 'right -10%',
+        onEnter: playVol,
+        onEnterBack: playVol,
+        onLeave: resetVol,
+        onLeaveBack: resetVol,
       })
 
       // Closing counter
+      function playClose() {
+        const el = document.querySelector<HTMLElement>('.close-counter')
+        if (el) counterUp(el, 2800, 1.6)
+        gsap.utils.toArray<HTMLElement>('.close-card').forEach((c, i) => {
+          gsap.fromTo(c,
+            { opacity: 0, y: 24, scale: 0.94 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.55, delay: 0.35 + i * 0.12, ease: 'back.out(1.5)' }
+          )
+        })
+      }
+
+      function resetClose() {
+        const el = document.querySelector<HTMLElement>('.close-counter')
+        if (el) resetCounter(el)
+        gsap.utils.toArray<HTMLElement>('.close-card').forEach((c) => {
+          gsap.set(c, { opacity: 0, y: 24, scale: 0.94 })
+        })
+      }
+
       ScrollTrigger.create({
         trigger: '.h-panel-close',
         containerAnimation: hScroll,
-        start: 'left 65%',
-        once: true,
-        onEnter: () => {
-          const el = document.querySelector<HTMLElement>('.close-counter')
-          if (!el) return
-          const o = { v: 0 }
-          gsap.to(o, {
-            v: 2800,
-            duration: 1.6,
-            ease: 'power2.out',
-            onUpdate: () => { el.textContent = Math.round(o.v).toLocaleString('es-ES') },
-          })
-          gsap.utils.toArray<HTMLElement>('.close-card').forEach((c, i) => {
-            gsap.fromTo(c, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, delay: 0.4 + i * 0.12 })
-          })
-        },
+        start: 'left 70%',
+        end: 'right -10%',
+        onEnter: playClose,
+        onEnterBack: playClose,
+        onLeave: resetClose,
+        onLeaveBack: resetClose,
       })
 
     }, root)
