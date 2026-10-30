@@ -17,9 +17,9 @@ const plusJakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'De días a segundos — La transformación del procesamiento',
+  title: 'Menos prompts, más lógica: saber cuándo usar IA',
   description:
-    'Cómo un archivo de ~50 partidas pasó de tardar 1.5 días a completarse en 15 segundos: una historia de aceleración operativa.',
+    'Historia del procesamiento de un archivo de ~50 partidas: de 1.5 días en manual a 50 minutos y 6–7 minutos con IA, y a 15 segundos con optimización programática.',
   generator: 'v0.app',
 }
 

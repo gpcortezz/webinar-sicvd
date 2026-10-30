@@ -8,18 +8,25 @@ if (typeof window !== 'undefined') {
   gsap.registerPlugin(Observer)
 }
 
+// Kinds follow the documented flow: semantic steps interpret;
+// pedimento completion applies known fields; upload publishes a built result.
 const PIPELINE_STEPS = [
-  { code: '01', title: 'Búsqueda de conocimiento', body: 'Localiza contexto y referencias útiles para el archivo.' },
-  { code: '02', title: 'Generación de embeddings', body: 'Vectoriza el contenido en el espacio semántico.' },
-  { code: '03', title: 'Recuperación semántica', body: 'Empareja el archivo con el conocimiento más relevante.' },
-  { code: '04', title: 'Completación de datos', body: 'Rellena y consolida los campos del pedimento.' },
-  { code: '05', title: 'Subida a plataforma', body: 'Publica el resultado en la plataforma.' },
+  { code: '01', kind: 'read', kindLabel: 'Interpretar', title: 'Búsqueda de conocimiento', body: 'Localiza contexto y referencias útiles para el archivo.' },
+  { code: '02', kind: 'read', kindLabel: 'Interpretar', title: 'Generación de embeddings', body: 'Vectoriza el contenido en el espacio semántico.' },
+  { code: '03', kind: 'read', kindLabel: 'Interpretar', title: 'Recuperación semántica', body: 'Empareja el archivo con el conocimiento más relevante.' },
+  { code: '04', kind: 'rule', kindLabel: 'Reglas', title: 'Completación de datos', body: 'Rellena y consolida los campos del pedimento.' },
+  { code: '05', kind: 'det', kindLabel: 'Determinista', title: 'Subida a plataforma', body: 'Publica el resultado ya construido.' },
 ] as const
 
+// Same reference file (~50 partidas), four measurements.
+// Deltas use one clock: 1.5 labor days ≈ 12 h = 43 200 s.
+//   43 200 / 3 000 s (50 min) = 14.4 → ~14×
+//   3 000 / 420 s (7 min, upper end of 6–7) = 7.1 → ~7×
+//   420 / 15 s = 28 → ~28×
+//   43 200 / 15 = 2 880 → shown as ~2 800×, the existing rounded figure
 const BENCH_ROWS = [
-  { from: 'Manual', fromTime: '1.5 días', to: 'Beta', toTime: '50 min', delta: '14' },
-  { from: 'Beta', fromTime: '50 min', to: 'Agosto', toTime: '6 – 7 min', delta: '7' },
-  { from: 'Agosto', fromTime: '6 – 7 min', to: 'Programático', toTime: '15 seg', delta: '28' },
+  { from: 'Manual', fromTime: '1.5 días', to: 'Beta', toTime: '50 min', delta: '14', approach: 'Primera optimización con IA' },
+  { from: 'Beta', fromTime: '50 min', to: 'Agosto', toTime: '6 – 7 min', delta: '7', approach: 'Optimización posterior con IA' },
 ] as const
 
 const VOL_ROWS = [
@@ -29,7 +36,8 @@ const VOL_ROWS = [
   { label: 'Agosto', period: 'pico', v: 189, pct: 100, dots: 18 },
 ] as const
 
-const PANEL_COUNT = 5
+const NAV = ['Archivo', 'Pipeline', 'Medición', 'Código', 'Volumen', 'Criterio', 'Resultado'] as const
+const PANEL_COUNT = NAV.length
 
 export default function Page() {
   const root = useRef<HTMLDivElement | null>(null)
@@ -46,21 +54,22 @@ export default function Page() {
     let busy = false
     const played = new Set<number>()
 
-    function setCounter(el: HTMLElement, target: number) {
-      el.textContent = target < 10
-        ? target.toFixed(1)
-        : Math.round(target).toLocaleString('es-ES')
+    function setCounter(el: HTMLElement, value: number, decimals = value < 10 && !Number.isInteger(value) ? 1 : 0) {
+      el.textContent = decimals > 0
+        ? value.toFixed(decimals)
+        : Math.round(value).toLocaleString('es-ES')
     }
 
     function counterUp(el: HTMLElement, target: number, duration = 1.0, delay = 0) {
+      const decimals = target < 10 && !Number.isInteger(target) ? 1 : 0
       const o = { v: 0 }
       gsap.to(o, {
         v: target,
         duration,
         delay,
         ease: 'power2.out',
-        onUpdate: () => setCounter(el, o.v),
-        onComplete: () => setCounter(el, target),
+        onUpdate: () => setCounter(el, o.v, decimals),
+        onComplete: () => setCounter(el, target, decimals),
       })
     }
 
@@ -161,6 +170,29 @@ export default function Page() {
       })
     }
 
+    function playCode(animate = true) {
+      const sec = document.querySelector<HTMLElement>('.code-sec-counter')
+      const mult = document.querySelector<HTMLElement>('.code-mult-counter')
+      const strike = document.querySelector<HTMLElement>('.code-strike')
+
+      if (!animate) {
+        if (sec) setCounter(sec, 15)
+        if (mult) setCounter(mult, 28)
+        if (strike) gsap.set(strike, { scaleX: 1, transformOrigin: 'left center' })
+        return
+      }
+
+      if (sec) sec.textContent = '0'
+      if (mult) mult.textContent = '0'
+      if (strike) gsap.set(strike, { scaleX: 0, transformOrigin: 'left center' })
+
+      const tl = gsap.timeline()
+      tl.to({}, { duration: 0.4 })
+      if (strike) tl.to(strike, { scaleX: 1, duration: 0.55, ease: 'power2.out' })
+      if (sec) tl.call(() => counterUp(sec, 15, 1.05), [], '<0.12')
+      if (mult) tl.call(() => counterUp(mult, 28, 1.05), [], '<0.2')
+    }
+
     function playVol(animate = true) {
       gsap.utils.toArray<HTMLElement>('.vol-row').forEach((row, i) => {
         const fill = row.querySelector<HTMLElement>('.vol-fill')
@@ -178,6 +210,19 @@ export default function Page() {
           gsap.set(row, { opacity: 1, x: 0, scale: 1 })
           if (fill) gsap.set(fill, { scaleX: target / 100 })
           if (numEl) setCounter(numEl, value)
+        }
+      })
+    }
+
+    function playDecision(animate = true) {
+      gsap.utils.toArray<HTMLElement>('.decide-col').forEach((col, i) => {
+        if (animate) {
+          gsap.fromTo(col,
+            { opacity: 0, y: 24, scale: 0.94 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.55, delay: 0.2 + i * 0.14, ease: 'back.out(1.5)' }
+          )
+        } else {
+          gsap.set(col, { opacity: 1, y: 0, scale: 1 })
         }
       })
     }
@@ -200,7 +245,7 @@ export default function Page() {
       })
     }
 
-    const playFns = [playHero, playPipe, playBench, playVol, playClose]
+    const playFns = [playHero, playPipe, playBench, playCode, playVol, playDecision, playClose]
 
     function animatePanelIn(index: number) {
       const panel = panels[index]
@@ -347,19 +392,22 @@ export default function Page() {
 
         <div className="h-track">
 
-          {/* ═══ PANEL 1 — HERO ═══ */}
+          {/* ═══ PANEL 1 — ARCHIVO ═══ */}
           <section className="h-panel h-panel-hero">
             <div className="pan-inner">
-              <p className="pan-anim pan-tag">Informe de transformación</p>
+              <p className="pan-anim pan-tag">Webinar</p>
               <h1 className="pan-anim pan-hero-title">
-                De días<br /><span className="pan-hero-em">a segundos</span>
+                Menos prompts,<br /><span className="pan-hero-em">más lógica</span>
               </h1>
               <p className="pan-anim pan-hero-sub">
-                El mismo archivo de ~50 partidas: de 1.5 días laborales a un parpadeo.
+                Saber cuándo usar IA.
+              </p>
+              <p className="pan-anim pan-hero-case">
+                Un archivo de ~50 partidas se procesaba a mano. Ese tiempo es el problema.
               </p>
               <div className="pan-anim pan-hero-nums">
                 <div className="pan-hero-before">
-                  <span className="pan-hero-label">Antes</span>
+                  <span className="pan-hero-label">Manual</span>
                   <div className="pan-hero-value">
                     <span className="pan-hero-big pan-hero-big-before">
                       1.5
@@ -370,7 +418,7 @@ export default function Page() {
                 </div>
                 <span className="pan-hero-arrow">→</span>
                 <div className="pan-hero-after">
-                  <span className="pan-hero-label">Ahora</span>
+                  <span className="pan-hero-label">Programático</span>
                   <div className="pan-hero-value">
                     <span className="pan-hero-big pan-hero-accent pan-hero-big-after">
                       <span className="hero-sec-counter">0</span>
@@ -388,19 +436,25 @@ export default function Page() {
           {/* ═══ PANEL 2 — PIPELINE ═══ */}
           <section className="h-panel h-panel-pipe">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">01</span> Pipeline del archivo</p>
-              <h2 className="pan-anim pan-title">Cinco etapas, del conocimiento a la plataforma.</h2>
-              <p className="pan-anim pan-lead">El flujo que transforma cada archivo en un pedimento listo.</p>
+              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">01</span> Cómo ayudó la IA</p>
+              <h2 className="pan-anim pan-title">No todas las etapas interpretan.</h2>
+              <p className="pan-anim pan-lead">La IA entra al buscar y recuperar conocimiento. Completar campos y publicar no son el mismo tipo de operación.</p>
               <div className="pan-anim pipe-wrap">
+                <div className="pipe-legend">
+                  <span><i className="pipe-swatch pipe-swatch-read" /> Interpretar</span>
+                  <span><i className="pipe-swatch pipe-swatch-rule" /> Reglas</span>
+                  <span><i className="pipe-swatch pipe-swatch-det" /> Determinista</span>
+                </div>
                 <div className="pipe-track"><div className="pipe-fill" /></div>
                 <div className="pipe-steps">
                   {PIPELINE_STEPS.map((s, i) => (
                     <div
                       key={s.code}
-                      className={`pipe-step${i === 0 ? ' is-lit' : ''}`}
+                      className={`pipe-step pipe-step-${s.kind}${i === 0 ? ' is-lit' : ''}`}
                       style={{ opacity: i === 0 ? 1 : 0.2 }}
                     >
                       <span className="pipe-code">{s.code}</span>
+                      <span className={`pipe-kind pipe-kind-${s.kind}`}>{s.kindLabel}</span>
                       <span className="pipe-name">{s.title}</span>
                       <span className="pipe-desc">{s.body}</span>
                     </div>
@@ -410,16 +464,17 @@ export default function Page() {
             </div>
           </section>
 
-          {/* ═══ PANEL 3 — BENCHMARK ═══ */}
+          {/* ═══ PANEL 3 — MEDICIÓN ═══ */}
           <section className="h-panel h-panel-bench">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">02</span> Benchmark</p>
-              <h2 className="pan-anim pan-title">Mismo archivo, 4 momentos de medición.</h2>
-              <p className="pan-anim pan-lead">Cada salto recorta el tiempo frente a la etapa anterior.</p>
+              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">02</span> Con IA</p>
+              <h2 className="pan-anim pan-title">La IA llegó hasta los minutos.</h2>
+              <p className="pan-anim pan-lead">Dos optimizaciones seguidas, sobre el mismo archivo. El modelo todavía estaba en el camino.</p>
               <div className="pan-anim bench-wrap">
                 {BENCH_ROWS.map((r, i) => (
-                  <div key={i} className={`bench-row${i === BENCH_ROWS.length - 1 ? ' is-final' : ''}`} style={{ opacity: 0 }}>
+                  <div key={i} className="bench-row" style={{ opacity: 0 }}>
                     <div className="bench-from">
+                      <span className="bench-approach">{r.approach}</span>
                       <span className="bench-stage">{r.from}</span>
                       <span className="bench-time">{r.fromTime}</span>
                     </div>
@@ -433,18 +488,58 @@ export default function Page() {
                     </span>
                   </div>
                 ))}
-                <p className="bench-foot pan-anim">Mismo archivo · ~50 partidas · 4 mediciones</p>
+                <p className="bench-foot pan-anim">
+                  Mismo archivo · ~50 partidas. 1.5 días laborales ≈ 12 h. Hasta aquí, las dos reducciones son con IA.
+                </p>
               </div>
             </div>
           </section>
 
-          {/* ═══ PANEL 4 — VOLUME ═══ */}
+          {/* ═══ PANEL 4 — CÓDIGO ═══ */}
+          <section className="h-panel h-panel-code">
+            <div className="pan-inner">
+              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">03</span> Con código</p>
+              <h2 className="pan-anim pan-title">Después, el tiempo cambió de escala.</h2>
+              <p className="pan-anim pan-lead">La regla ya era explícita. El mismo archivo salió de los minutos.</p>
+              <div className="pan-anim code-stage">
+                <div className="code-from">
+                  <span className="code-k">Agosto · con IA</span>
+                  <div className="code-value">
+                    <span className="code-from-num">
+                      6–7
+                      <span className="code-strike" />
+                    </span>
+                    <span className="code-unit">min</span>
+                  </div>
+                </div>
+                <span className="code-arrow" aria-hidden>→</span>
+                <div className="code-to">
+                  <span className="code-k code-k-accent">Programático</span>
+                  <div className="code-value">
+                    <span className="code-to-num">
+                      <span className="code-sec-counter">0</span>
+                    </span>
+                    <span className="code-unit code-unit-accent">segundos</span>
+                  </div>
+                  <p className="code-mult">
+                    −<span className="code-mult-counter">0</span>×
+                    <span className="code-mult-label">sobre la etapa con IA</span>
+                  </p>
+                </div>
+              </div>
+              <p className="pan-anim bench-foot">
+                Mismo archivo · ~50 partidas. ~28× usa el extremo de 7 min dentro de 6–7 min.
+              </p>
+            </div>
+          </section>
+
+          {/* ═══ PANEL 5 — VOLUME ═══ */}
           <section className="h-panel h-panel-vol">
             <div className="pan-inner pan-inner-vol">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">03</span> Volumen diario</p>
-              <h2 className="pan-anim pan-title pan-title-vol">Más archivos por día en cada etapa.</h2>
+              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">04</span> Volumen observado</p>
+              <h2 className="pan-anim pan-title pan-title-vol">Creció lo que se podía procesar.</h2>
               <p className="pan-anim pan-lead pan-lead-vol">
-                La capacidad se multiplicó <span className="text-accent">~315×</span> en el pico.
+                De 0.6 a un pico de 189 archivos por día, <span className="text-accent">~315×</span>. Es capacidad, no precisión.
               </p>
               <div className="pan-anim vol-wrap">
                 {VOL_ROWS.map((r, i) => {
@@ -480,35 +575,66 @@ export default function Page() {
                 })}
               </div>
               <p className="pan-anim pan-note">
-                <span className="text-accent">Nota:</span> ~189 archivos/día es un pico observado, no un promedio sostenido.
+                <span className="text-accent">Nota:</span> ~189 archivos/día es un pico observado, no un promedio sostenido. El volumen no es la misma medición que el tiempo por archivo, ni una medida de calidad.
               </p>
             </div>
           </section>
 
-          {/* ═══ PANEL 5 — CLOSING ═══ */}
+          {/* ═══ PANEL 5 — CRITERIO ═══ */}
+          <section className="h-panel h-panel-decide">
+            <div className="pan-inner">
+              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">05</span> Cómo decidir</p>
+              <h2 className="pan-anim pan-title">Cuándo IA, cuándo código.</h2>
+              <p className="pan-anim pan-lead">Una guía para este tipo de problema. No es una ley.</p>
+              <div className="pan-anim decide-cols">
+                <article className="decide-col is-ai" style={{ opacity: 0 }}>
+                  <span className="decide-k">IA</span>
+                  <h3 className="decide-t">Cuando hay que interpretar</h3>
+                  <p className="decide-b">Lenguaje natural, información variable, documentos sin estructura fija o ambigüedad.</p>
+                </article>
+                <article className="decide-col is-code" style={{ opacity: 0 }}>
+                  <span className="decide-k">Código</span>
+                  <h3 className="decide-t">Cuando la regla ya está escrita</h3>
+                  <p className="decide-b">Entradas y salidas conocidas, y operaciones que pueden expresarse como instrucciones verificables.</p>
+                </article>
+                <article className="decide-col is-hybrid" style={{ opacity: 0 }}>
+                  <span className="decide-k">Ambos</span>
+                  <h3 className="decide-t">Cuando hacen falta las dos</h3>
+                  <p className="decide-b">La IA interpreta. El código aporta control, validación y repetibilidad.</p>
+                </article>
+              </div>
+              <p className="pan-anim decide-rule">
+                Usa IA cuando aporte capacidad de interpretación. Usa código cuando las reglas sean explícitas. Combina ambos cuando el problema necesite las dos capacidades.
+              </p>
+            </div>
+          </section>
+
+          {/* ═══ PANEL 6 — RESULTADO ═══ */}
           <section className="h-panel h-panel-close">
-            <div className="pan-inner pan-inner-center">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">04</span> El resultado</p>
+            <div className="pan-inner pan-inner-center pan-inner-close">
+              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">06</span> El resultado</p>
+              <p className="pan-anim close-thesis">
+                La IA permitió acelerar el proceso; la optimización programática permitió llevarlo todavía más lejos.
+              </p>
               <div className="pan-anim close-hero">
+                <span className="close-approx">~</span>
                 <span className="close-counter">0</span><span className="close-x">×</span>
               </div>
-              <p className="pan-anim close-tag">
-                De <span className="close-old">días</span> a <span className="text-accent">segundos</span>.
-              </p>
               <div className="pan-anim close-cards">
                 {[
-                  { k: 'Velocidad', t: 'De días a segundos', b: 'El mismo archivo de ~50 partidas pasó de ~1.5 días a ~15 segundos.' },
-                  { k: 'Escala', t: '315× más volumen', b: 'De 0.6 a 189 archivos por día.' },
-                  { k: 'Impacto', t: 'Equipo liberado', b: 'Sin trabajo manual repetitivo.' },
+                  { k: 'Con IA', t: '1.5 días → 6–7 min' },
+                  { k: 'Con código', t: '6–7 min → 15 s' },
+                  { k: 'En operación', t: '0.6 → 189 / día' },
                 ].map((c) => (
                   <article key={c.k} className="close-card" style={{ opacity: 0 }}>
                     <span className="close-card-k">{c.k}</span>
                     <h3 className="close-card-t">{c.t}</h3>
-                    <p className="close-card-b">{c.b}</p>
                   </article>
                 ))}
               </div>
-              <p className="pan-anim pan-foot">Benchmark constante · archivo de ~50 partidas</p>
+              <p className="pan-anim close-quote">
+                La mejor solución no es la que utiliza más IA, sino la que resuelve mejor el problema.
+              </p>
             </div>
           </section>
 
@@ -517,7 +643,7 @@ export default function Page() {
         <div className="tl-bar">
           <div className="tl-track"><div className="tl-fill" /></div>
           <div className="tl-dots">
-            {['Archivo', 'Pipeline', 'Medición', 'Volumen', 'Resultado'].map((l, i) => (
+            {NAV.map((l, i) => (
               <button key={l} type="button" className={`tl-dot${i === 0 ? ' is-active' : ''}`}>
                 <span className="tl-pip" />
                 <span className="tl-label">{l}</span>
