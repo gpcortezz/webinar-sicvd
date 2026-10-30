@@ -4,24 +4,26 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Active: deep charcoal + amber accent + warm neutrals */
-  --color-navy: #0b0b0c;
-  --color-navy-deep: #050505;
-  --color-navy-soft: #171718;
-  --color-orange: #e8a317;
-  --color-orange-soft: #f0c45a;
-  --color-turquoise: #a39e93;
-  --color-ink: #f1efe9;
-  --color-ink-muted: #8f8b84;
+  /* Future Meets: white field, navy ink, electric blue accent */
+  --color-navy: #121c4e;
+  --color-navy-deep: #0b1233;
+  --color-navy-soft: #e3e9f6;
+  --color-orange: #3d6bff;
+  --color-orange-soft: #6c9bff;
+  --color-turquoise: #1f3682;
+  --color-ink: #0b1233;
+  --color-ink-muted: #5a6380;
+  --color-sky: #8cc6ff;
 
-  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, Menlo, monospace;
 }
 
 :root {
-  color-scheme: dark;
-  --background: #0b0b0c;
-  --foreground: #f1efe9;
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #0b1233;
 }
 
 /* Alternate — data-palette="terracotta" */
@@ -111,12 +113,12 @@ body {
   top: 8%;
   background: radial-gradient(
     circle at center,
-    color-mix(in oklab, var(--color-orange) 11%, transparent) 0%,
-    color-mix(in oklab, var(--color-orange) 4%, transparent) 42%,
+    color-mix(in oklab, var(--color-sky) 55%, transparent) 0%,
+    color-mix(in oklab, var(--color-orange) 16%, transparent) 42%,
     transparent 72%
   );
   filter: blur(140px);
-  opacity: 0.7;
+  opacity: 1;
 }
 
 .h-ambient-glow-b {
@@ -153,7 +155,7 @@ body {
 
 .h-ambient-rings circle {
   fill: none;
-  stroke: color-mix(in oklab, var(--color-ink) 8%, transparent);
+  stroke: color-mix(in oklab, var(--color-orange) 22%, transparent);
   stroke-width: 1;
 }
 
@@ -293,7 +295,8 @@ body {
 
 .pan-hero-em {
   color: var(--color-orange);
-  font-style: italic;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .pan-hero-sub {
@@ -1173,8 +1176,8 @@ body {
 }
 
 .tl-track {
-  height: 2px;
-  background: color-mix(in oklab, var(--color-ink) 10%, transparent);
+  height: 4px;
+  background: color-mix(in oklab, var(--color-orange) 16%, transparent);
   margin-bottom: 0.65rem;
 }
 
@@ -1233,6 +1236,87 @@ body {
 }
 
 .tl-dot.is-active .tl-label { color: var(--color-orange); }
+
+/* Future Meets type: heavy sans headlines, mono labels, no italic serif */
+.pan-kicker,
+.pan-tag,
+.pan-hero-label,
+.pan-hero-unit,
+.pan-foot,
+.code-k,
+.code-unit,
+.bench-approach,
+.pipe-kind,
+.pipe-legend,
+.pipe-code,
+.decide-k,
+.close-card-k,
+.vol-unit,
+.vol-period,
+.tl-label,
+.pan-scroll-hint {
+  font-family: var(--font-mono);
+  font-style: normal;
+}
+
+.pan-hero-title,
+.pan-title,
+.pan-hero-big,
+.pipe-name,
+.bench-delta,
+.code-from-num,
+.code-to-num,
+.code-mult,
+.decide-t,
+.decide-rule,
+.close-thesis,
+.close-quote,
+.close-counter,
+.close-x,
+.close-approx,
+.close-card-t {
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.pan-hero-title,
+.pan-title,
+.close-thesis,
+.decide-t,
+.pipe-name,
+.close-card-t {
+  text-transform: uppercase;
+}
+
+.pan-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kicker-sq {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--color-orange);
+  transform-origin: center;
+}
+
+.bench-row,
+.vol-row,
+.decide-col,
+.close-card {
+  transition: transform 0.9s cubic-bezier(.33, .1, .25, 1);
+}
+
+.bench-row:hover,
+.vol-row:hover,
+.decide-col:hover,
+.close-card:hover {
+  transform: translateY(-4px);
+}
 
 /* Shared-screen and short viewports: keep each slide inside the frame */
 @media (max-height: 860px) {

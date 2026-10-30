@@ -1,19 +1,18 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Instrument_Serif, Plus_Jakarta_Sans } from 'next/font/google'
+import { Inter_Tight, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
-const instrumentSerif = Instrument_Serif({
+const interTight = Inter_Tight({
   subsets: ['latin'],
-  variable: '--font-instrument',
-  weight: ['400'],
-  style: ['normal', 'italic'],
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700', '800'],
 })
 
-const plusJakarta = Plus_Jakarta_Sans({
+const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-jakarta',
-  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-jetbrains',
+  weight: ['400', '500', '700'],
 })
 
 export const metadata: Metadata = {
@@ -24,8 +23,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#0b0b0c',
+  colorScheme: 'light',
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({
@@ -34,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${instrumentSerif.variable} ${plusJakarta.variable} bg-background`}>
+    <html lang="es" className={`${interTight.variable} ${jetbrains.variable} bg-background`}>
       <body className="antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

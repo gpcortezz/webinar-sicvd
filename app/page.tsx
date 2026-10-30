@@ -133,17 +133,21 @@ export default function Page() {
 
         steps.slice(1).forEach((step, i) => {
           const at = hold + i * gap
-          tl.to(
+          tl.fromTo(
             step,
+            { y: 22, clipPath: 'inset(30% 0 0 0 round 8px)' },
             {
               opacity: 1,
-              duration: 0.65,
+              y: 0,
+              clipPath: 'inset(0% 0 0 0 round 8px)',
+              duration: 0.9,
+              ease: easeSoft,
               onStart: () => step.classList.add('is-lit'),
             },
             at
           )
           if (fill) {
-            tl.to(fill, { scaleX: (i + 2) / n, duration: 0.65 }, at)
+            tl.to(fill, { scaleX: (i + 2) / n, duration: 0.9, ease: easeSoft }, at)
           }
         })
       } else {
@@ -153,19 +157,36 @@ export default function Page() {
       }
     }
 
+    const easeSoft = 'expo.out'
+
+    function wipeIn(el: HTMLElement, delay: number, animate: boolean) {
+      if (!animate) {
+        gsap.set(el, { opacity: 1, y: 0, scale: 1, clipPath: 'inset(0% 0 0 0 round 8px)' })
+        return
+      }
+      gsap.fromTo(el,
+        { opacity: 0, y: 48, scale: 0.96, clipPath: 'inset(28% 0 0 0 round 8px)' },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          clipPath: 'inset(0% 0 0 0 round 8px)',
+          duration: 1.2,
+          delay,
+          ease: easeSoft,
+          overwrite: true,
+        }
+      )
+    }
+
     function playBench(animate = true) {
       gsap.utils.toArray<HTMLElement>('.bench-row').forEach((row, i) => {
         const numEl = row.querySelector<HTMLElement>('.bench-num')
         const target = Number(numEl?.dataset.target || '0')
-        if (animate) {
-          gsap.fromTo(row,
-            { opacity: 0, x: -24, scale: 0.95 },
-            { opacity: 1, x: 0, scale: 1, duration: 0.55, delay: i * 0.18, ease: 'back.out(1.4)' }
-          )
-          if (numEl) counterUp(numEl, target, 0.8, i * 0.18 + 0.12)
-        } else {
-          gsap.set(row, { opacity: 1, x: 0, scale: 1 })
-          if (numEl) setCounter(numEl, target)
+        wipeIn(row, i * 0.12, animate)
+        if (numEl) {
+          if (animate) counterUp(numEl, target, 1.05, i * 0.12 + 0.15)
+          else setCounter(numEl, target)
         }
       })
     }
@@ -200,14 +221,11 @@ export default function Page() {
         const target = Number(fill?.dataset.pct || '0')
         const value = Number(numEl?.dataset.val || '0')
         if (animate) {
-          gsap.fromTo(row,
-            { opacity: 0, x: -18, scale: 0.96 },
-            { opacity: 1, x: 0, scale: 1, duration: 0.5, delay: i * 0.1, ease: 'back.out(1.4)' }
-          )
-          if (fill) gsap.to(fill, { scaleX: target / 100, duration: 1.0, delay: i * 0.1 + 0.08, ease: 'power3.out' })
-          if (numEl) counterUp(numEl, value, 1.0, i * 0.1 + 0.1)
+          wipeIn(row, i * 0.1, true)
+          if (fill) gsap.to(fill, { scaleX: target / 100, duration: 1.25, delay: i * 0.1 + 0.12, ease: easeSoft })
+          if (numEl) counterUp(numEl, value, 1.15, i * 0.1 + 0.12)
         } else {
-          gsap.set(row, { opacity: 1, x: 0, scale: 1 })
+          wipeIn(row, 0, false)
           if (fill) gsap.set(fill, { scaleX: target / 100 })
           if (numEl) setCounter(numEl, value)
         }
@@ -216,14 +234,7 @@ export default function Page() {
 
     function playDecision(animate = true) {
       gsap.utils.toArray<HTMLElement>('.decide-col').forEach((col, i) => {
-        if (animate) {
-          gsap.fromTo(col,
-            { opacity: 0, y: 24, scale: 0.94 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.55, delay: 0.2 + i * 0.14, ease: 'back.out(1.5)' }
-          )
-        } else {
-          gsap.set(col, { opacity: 1, y: 0, scale: 1 })
-        }
+        wipeIn(col, 0.16 + i * 0.12, animate)
       })
     }
 
@@ -234,14 +245,7 @@ export default function Page() {
         else setCounter(el, 2800)
       }
       gsap.utils.toArray<HTMLElement>('.close-card').forEach((c, i) => {
-        if (animate) {
-          gsap.fromTo(c,
-            { opacity: 0, y: 24, scale: 0.94 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.55, delay: 0.35 + i * 0.12, ease: 'back.out(1.5)' }
-          )
-        } else {
-          gsap.set(c, { opacity: 1, y: 0, scale: 1 })
-        }
+        wipeIn(c, 0.28 + i * 0.12, animate)
       })
     }
 
@@ -254,17 +258,24 @@ export default function Page() {
       const firstVisit = !played.has(index)
       played.add(index)
 
+      panel.classList.add('is-in')
       gsap.fromTo(els,
-        { opacity: 0, y: 40, scale: 0.94 },
+        { opacity: 0, y: 46, scale: 0.96, clipPath: 'inset(22% 0 0 0 round 8px)' },
         {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.7,
-          stagger: 0.08,
-          ease: 'back.out(1.4)',
+          clipPath: 'inset(0% 0 0 0 round 8px)',
+          duration: 1.15,
+          stagger: 0.09,
+          ease: easeSoft,
           overwrite: true,
         }
+      )
+      const squares = panel.querySelectorAll<HTMLElement>('.kicker-sq')
+      gsap.fromTo(squares,
+        { rotate: -180, scale: 0 },
+        { rotate: 0, scale: 1, duration: 0.9, delay: 0.15, stagger: 0.08, ease: 'back.out(1.6)', overwrite: true }
       )
       playFns[index]?.(firstVisit)
     }
@@ -272,13 +283,13 @@ export default function Page() {
     function animatePanelOut(index: number, direction: 1 | -1) {
       const panel = panels[index]
       if (!panel) return
+      panel.classList.remove('is-in')
       const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
-      // Solo fade visual — no resetear valores a 0
       gsap.to(els, {
         opacity: 0,
-        y: direction > 0 ? -28 : 36,
-        scale: 0.96,
-        duration: 0.35,
+        y: direction > 0 ? -36 : 28,
+        scale: 0.98,
+        duration: 0.45,
         stagger: 0.03,
         ease: 'power2.in',
         overwrite: true,
@@ -288,8 +299,8 @@ export default function Page() {
     function updateChrome(index: number) {
       gsap.to(timelineFill, {
         scaleX: (index + 1) / PANEL_COUNT,
-        duration: 0.55,
-        ease: 'power2.out',
+        duration: 0.85,
+        ease: easeSoft,
       })
       tlDots.forEach((dot, i) => {
         dot.classList.toggle('is-active', i === index)
@@ -321,18 +332,13 @@ export default function Page() {
     }
 
     // Initial state: panel 0 visible
-    panels.forEach((panel, i) => {
+    panels.forEach((panel) => {
       const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
-      if (i === 0) {
-        gsap.set(els, { opacity: 1, y: 0, scale: 1 })
-      } else {
-        gsap.set(els, { opacity: 0, y: 40, scale: 0.94 })
-      }
+      gsap.set(els, { opacity: 0, y: 46, scale: 0.96, clipPath: 'inset(22% 0 0 0 round 8px)' })
     })
     gsap.set(track, { x: 0 })
     gsap.set(timelineFill, { scaleX: 1 / PANEL_COUNT, transformOrigin: 'left center' })
-    played.add(0)
-    playHero(true)
+    animatePanelIn(0)
 
     const observer = Observer.create({
       target: window,
@@ -395,7 +401,7 @@ export default function Page() {
           {/* ═══ PANEL 1 — ARCHIVO ═══ */}
           <section className="h-panel h-panel-hero">
             <div className="pan-inner">
-              <p className="pan-anim pan-tag">Webinar</p>
+              <p className="pan-anim pan-tag"><span className="kicker-sq" aria-hidden />Webinar</p>
               <h1 className="pan-anim pan-hero-title">
                 Menos prompts,<br /><span className="pan-hero-em">más lógica</span>
               </h1>
@@ -436,7 +442,7 @@ export default function Page() {
           {/* ═══ PANEL 2 — PIPELINE ═══ */}
           <section className="h-panel h-panel-pipe">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">01</span> Cómo ayudó la IA</p>
+              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">01</span> Cómo ayudó la IA</p>
               <h2 className="pan-anim pan-title">No todas las etapas interpretan.</h2>
               <p className="pan-anim pan-lead">La IA entra al buscar y recuperar conocimiento. Completar campos y publicar no son el mismo tipo de operación.</p>
               <div className="pan-anim pipe-wrap">
@@ -467,7 +473,7 @@ export default function Page() {
           {/* ═══ PANEL 3 — MEDICIÓN ═══ */}
           <section className="h-panel h-panel-bench">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">02</span> Con IA</p>
+              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">02</span> Con IA</p>
               <h2 className="pan-anim pan-title">La IA llegó hasta los minutos.</h2>
               <p className="pan-anim pan-lead">Dos optimizaciones seguidas, sobre el mismo archivo. El modelo todavía estaba en el camino.</p>
               <div className="pan-anim bench-wrap">
@@ -498,7 +504,7 @@ export default function Page() {
           {/* ═══ PANEL 4 — CÓDIGO ═══ */}
           <section className="h-panel h-panel-code">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">03</span> Con código</p>
+              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">03</span> Con código</p>
               <h2 className="pan-anim pan-title">Después, el tiempo cambió de escala.</h2>
               <p className="pan-anim pan-lead">La regla ya era explícita. El mismo archivo salió de los minutos.</p>
               <div className="pan-anim code-stage">
@@ -536,7 +542,7 @@ export default function Page() {
           {/* ═══ PANEL 5 — VOLUME ═══ */}
           <section className="h-panel h-panel-vol">
             <div className="pan-inner pan-inner-vol">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">04</span> Volumen observado</p>
+              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">04</span> Volumen observado</p>
               <h2 className="pan-anim pan-title pan-title-vol">Creció lo que se podía procesar.</h2>
               <p className="pan-anim pan-lead pan-lead-vol">
                 De 0.6 a un pico de 189 archivos por día, <span className="text-accent">~315×</span>. Es capacidad, no precisión.
@@ -583,7 +589,7 @@ export default function Page() {
           {/* ═══ PANEL 5 — CRITERIO ═══ */}
           <section className="h-panel h-panel-decide">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">05</span> Cómo decidir</p>
+              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">05</span> Cómo decidir</p>
               <h2 className="pan-anim pan-title">Cuándo IA, cuándo código.</h2>
               <p className="pan-anim pan-lead">Una guía para este tipo de problema. No es una ley.</p>
               <div className="pan-anim decide-cols">
@@ -612,7 +618,7 @@ export default function Page() {
           {/* ═══ PANEL 6 — RESULTADO ═══ */}
           <section className="h-panel h-panel-close">
             <div className="pan-inner pan-inner-center pan-inner-close">
-              <p className="pan-anim pan-kicker"><span className="pan-kicker-num">06</span> El resultado</p>
+              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">06</span> El resultado</p>
               <p className="pan-anim close-thesis">
                 La IA permitió acelerar el proceso; la optimización programática permitió llevarlo todavía más lejos.
               </p>
