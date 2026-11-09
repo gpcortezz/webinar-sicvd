@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { gsap } from 'gsap'
 import { Observer } from 'gsap/Observer'
 
@@ -11,11 +11,11 @@ if (typeof window !== 'undefined') {
 // Kinds follow the documented flow: semantic steps interpret;
 // pedimento completion applies known fields; upload publishes a built result.
 const PIPELINE_STEPS = [
-  { code: '01', kind: 'read', kindLabel: 'Interpretar', title: 'Búsqueda de conocimiento', body: 'Localiza contexto y referencias útiles para el archivo.' },
-  { code: '02', kind: 'read', kindLabel: 'Interpretar', title: 'Generación de embeddings', body: 'Vectoriza el contenido en el espacio semántico.' },
-  { code: '03', kind: 'read', kindLabel: 'Interpretar', title: 'Recuperación semántica', body: 'Empareja el archivo con el conocimiento más relevante.' },
-  { code: '04', kind: 'rule', kindLabel: 'Reglas', title: 'Completación de datos', body: 'Rellena y consolida los campos del pedimento.' },
-  { code: '05', kind: 'det', kindLabel: 'Determinista', title: 'Subida a plataforma', body: 'Publica el resultado ya construido.' },
+  { code: '01', kind: 'read', kindLabel: 'Interpretar', icon: 'search', title: 'Búsqueda de conocimiento', body: 'Localiza contexto y referencias útiles para el archivo.' },
+  { code: '02', kind: 'read', kindLabel: 'Interpretar', icon: 'layers', title: 'Generación de embeddings', body: 'Vectoriza el contenido en el espacio semántico.' },
+  { code: '03', kind: 'read', kindLabel: 'Interpretar', icon: 'link', title: 'Recuperación semántica', body: 'Empareja el archivo con el conocimiento más relevante.' },
+  { code: '04', kind: 'rule', kindLabel: 'Reglas', icon: 'list', title: 'Completación de datos', body: 'Rellena y consolida los campos del pedimento.' },
+  { code: '05', kind: 'det', kindLabel: 'Determinista', icon: 'upload', title: 'Subida a plataforma', body: 'Publica el resultado ya construido.' },
 ] as const
 
 // Same reference file (~50 partidas), four measurements.
@@ -36,8 +36,77 @@ const VOL_ROWS = [
   { label: 'Agosto', period: 'pico', v: 189, pct: 100, dots: 18 },
 ] as const
 
+const DECIDE_COLS = [
+  { tone: 'a', icon: 'spark', k: 'IA', t: 'Cuando hay que interpretar', b: 'Lenguaje natural, información variable, documentos sin estructura fija o ambigüedad.' },
+  { tone: 'b', icon: 'code', k: 'Código', t: 'Cuando la regla ya está escrita', b: 'Entradas y salidas conocidas, y operaciones que pueden expresarse como instrucciones verificables.' },
+  { tone: 'c', icon: 'plus', k: 'Ambos', t: 'Cuando hacen falta las dos', b: 'La IA interpreta. El código aporta control, validación y repetibilidad.' },
+] as const
+
+const CLOSE_ROWS = [
+  { icon: 'spark', k: 'Con IA', t: '1.5 días → 6–7 min' },
+  { icon: 'code', k: 'Con código', t: '6–7 min → 15 s' },
+  { icon: 'bars', k: 'En operación', t: '0.6 → 189 / día' },
+] as const
+
+const THESIS = 'La IA permitió acelerar el proceso; la optimización programática permitió llevarlo todavía más lejos.'
+const THESIS_HL = new Set(['acelerar', 'todavía', 'más', 'lejos.'])
+
 const NAV = ['Archivo', 'Pipeline', 'Medición', 'Código', 'Volumen', 'Criterio', 'Resultado'] as const
 const PANEL_COUNT = NAV.length
+
+const ICONS: Record<string, ReactNode> = {
+  search: <><circle cx="11" cy="11" r="6" /><path d="m20 20-4.2-4.2" /></>,
+  layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></>,
+  link: <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>,
+  list: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2" /></>,
+  upload: <><path d="M12 15V4m0 0-4 4m4-4 4 4" /><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></>,
+  spark: <path d="M12 3v4m0 10v4M3 12h4m10 0h4M6.3 6.3l2.5 2.5m6.4 6.4 2.5 2.5m0-11.4-2.5 2.5m-6.4 6.4-2.5 2.5" />,
+  code: <path d="m8 7-5 5 5 5m8-10 5 5-5 5M14 4l-4 16" />,
+  plus: <path d="M12 4v16M4 12h16" />,
+  bars: <path d="M5 20V12m7 8V7m7 13V4" />,
+}
+
+function Icon({ name }: { name: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {ICONS[name]}
+    </svg>
+  )
+}
+
+function Pattern({ kind, className = '' }: { kind: 'rings' | 'rays' | 'dots' | 'frame'; className?: string }) {
+  return (
+    <svg className={`fm-pat ${className}`} viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden>
+      {kind === 'rings' && [24, 48, 72, 96, 120, 144, 168].map((r) => <circle key={r} cx="200" cy="200" r={r} />)}
+      {kind === 'rays' && Array.from({ length: 14 }).map((_, i) => {
+        const a = (Math.PI / 2) * (i / 13) + Math.PI
+        return <line key={i} x1="200" y1="200" x2={200 + Math.cos(a) * 260} y2={200 + Math.sin(a) * 260} />
+      })}
+      {kind === 'dots' && Array.from({ length: 16 }).map((_, i) => (
+        <rect key={i} x={120 + (i % 4) * 20} y={40 + Math.floor(i / 4) * 20} width="4" height="4" fill="currentColor" stroke="none" />
+      ))}
+      {kind === 'frame' && <><rect x="110" y="50" width="80" height="80" /><rect x="135" y="75" width="30" height="30" /></>}
+    </svg>
+  )
+}
+
+function SlideTitle({ lead, accent }: { lead: string; accent: string }) {
+  return (
+    <h2 className="pan-title">
+      <span className="h-mask"><span>{lead}</span></span>
+      <span className="h-mask"><span className="pan-title-accent">{accent}</span></span>
+    </h2>
+  )
+}
+
+function Kicker({ num, children }: { num: string; children: ReactNode }) {
+  return (
+    <p className="pan-anim pan-kicker">
+      <span className="kicker-sq" aria-hidden />
+      <span className="pan-kicker-num">{num}</span> {children}
+    </p>
+  )
+}
 
 export default function Page() {
   const root = useRef<HTMLDivElement | null>(null)
@@ -53,6 +122,8 @@ export default function Page() {
     let current = 0
     let busy = false
     const played = new Set<number>()
+    const easeSoft = 'expo.out'
+    const settle = 'transform,clipPath,filter'
 
     function setCounter(el: HTMLElement, value: number, decimals = value < 10 && !Number.isInteger(value) ? 1 : 0) {
       el.textContent = decimals > 0
@@ -73,95 +144,9 @@ export default function Page() {
       })
     }
 
-    function playHero(animate = true) {
-      const el = document.querySelector<HTMLElement>('.hero-sec-counter')
-      const before = document.querySelector<HTMLElement>('.pan-hero-before')
-      const after = document.querySelector<HTMLElement>('.pan-hero-after')
-      const arrow = document.querySelector<HTMLElement>('.pan-hero-arrow')
-
-      if (!animate) {
-        if (el) setCounter(el, 15)
-        gsap.set('.hero-strike', { scaleX: 1, transformOrigin: 'left' })
-        gsap.set(before, { scale: 0.85, opacity: 0.7, transformOrigin: 'left top' })
-        gsap.set(after, { scale: 1.55, opacity: 1, transformOrigin: 'left top' })
-        gsap.set(arrow, { opacity: 1 })
-        return
-      }
-
-      if (el) el.textContent = '0'
-      gsap.set('.hero-strike', { scaleX: 0, transformOrigin: 'left' })
-      gsap.set(before, { scale: 1.45, opacity: 1, transformOrigin: 'left top' })
-      gsap.set(after, { scale: 0.72, opacity: 0.35, transformOrigin: 'left top' })
-      gsap.set(arrow, { opacity: 0.2 })
-
-      const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
-
-      // Hold "Antes" large — breathe before morph
-      tl.to({}, { duration: 1.4 })
-
-      // Soft strike, then crossfade scales (no bounce — clean ease)
-      tl.to('.hero-strike', { scaleX: 1, duration: 0.7, ease: 'power2.out' }, 'morph')
-      tl.to(before, { scale: 0.85, opacity: 0.7, duration: 1.55 }, 'morph+=0.08')
-      tl.to(after, { scale: 1.55, opacity: 1, duration: 1.65 }, 'morph+=0.18')
-      tl.to(arrow, { opacity: 1, duration: 0.9, ease: 'power1.out' }, 'morph+=0.35')
-
-      if (el) {
-        tl.call(() => counterUp(el, 15, 1.35), [], 'morph+=0.45')
-      }
-    }
-
-    function playPipe(animate = true) {
-      const steps = gsap.utils.toArray<HTMLElement>('.pipe-step')
-      const fill = document.querySelector<HTMLElement>('.pipe-fill')
-      const n = steps.length || 1
-
-      if (animate) {
-        steps.forEach((step, i) => {
-          if (i === 0) step.classList.add('is-lit')
-          else step.classList.remove('is-lit')
-        })
-        // First already on; rest dimmed
-        gsap.set(steps[0], { opacity: 1, y: 0, scale: 1, overwrite: true })
-        gsap.set(steps.slice(1), { opacity: 0.2, y: 0, scale: 1, overwrite: true })
-        if (fill) gsap.set(fill, { scaleX: n > 0 ? 1 / n : 0 })
-
-        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } })
-        // Hold with only first lit, then light 02→05 every 3s
-        const hold = 3
-        const gap = 3
-        tl.to({}, { duration: hold })
-
-        steps.slice(1).forEach((step, i) => {
-          const at = hold + i * gap
-          tl.fromTo(
-            step,
-            { y: 22, clipPath: 'inset(30% 0 0 0 round 8px)' },
-            {
-              opacity: 1,
-              y: 0,
-              clipPath: 'inset(0% 0 0 0 round 8px)',
-              duration: 0.9,
-              ease: easeSoft,
-              onStart: () => step.classList.add('is-lit'),
-            },
-            at
-          )
-          if (fill) {
-            tl.to(fill, { scaleX: (i + 2) / n, duration: 0.9, ease: easeSoft }, at)
-          }
-        })
-      } else {
-        steps.forEach((step) => step.classList.add('is-lit'))
-        gsap.set(steps, { opacity: 1, y: 0, scale: 1 })
-        if (fill) gsap.set(fill, { scaleX: 1 })
-      }
-    }
-
-    const easeSoft = 'expo.out'
-
     function wipeIn(el: HTMLElement, delay: number, animate: boolean) {
       if (!animate) {
-        gsap.set(el, { opacity: 1, y: 0, scale: 1, clipPath: 'inset(0% 0 0 0 round 8px)' })
+        gsap.set(el, { opacity: 1, clearProps: settle })
         return
       }
       gsap.fromTo(el,
@@ -175,17 +160,115 @@ export default function Page() {
           delay,
           ease: easeSoft,
           overwrite: true,
+          clearProps: settle,
         }
       )
+    }
+
+    // Adjacent cards: rise + clip only — no scale, so neighbors don't collide while growing
+    function riseIn(el: HTMLElement, delay: number, animate: boolean) {
+      if (!animate) {
+        gsap.set(el, { opacity: 1, clearProps: settle })
+        return
+      }
+      gsap.fromTo(el,
+        { opacity: 0, y: 28, clipPath: 'inset(18% 0 0 0 round 8px)' },
+        {
+          opacity: 1,
+          y: 0,
+          clipPath: 'inset(0% 0 0 0 round 8px)',
+          duration: 1.05,
+          delay,
+          ease: easeSoft,
+          overwrite: true,
+          clearProps: settle,
+        }
+      )
+    }
+
+    function playHero(animate = true) {
+      const el = document.querySelector<HTMLElement>('.hero-sec-counter')
+      const before = document.querySelector<HTMLElement>('.hero-before')
+      const after = document.querySelector<HTMLElement>('.hero-after')
+      const arrow = document.querySelector<HTMLElement>('.hero-arrow')
+
+      // Each side scales away from the arrow so they never overlap
+      gsap.set(before, { transformOrigin: 'right bottom' })
+      gsap.set(after, { transformOrigin: 'left bottom' })
+
+      if (!animate) {
+        if (el) setCounter(el, 15)
+        gsap.set('.hero-strike', { scaleX: 1, transformOrigin: 'left' })
+        gsap.set(before, { scale: 0.78, opacity: 0.55 })
+        gsap.set(after, { scale: 1.12, opacity: 1 })
+        gsap.set(arrow, { opacity: 1 })
+        return
+      }
+
+      if (el) el.textContent = '0'
+      gsap.set('.hero-strike', { scaleX: 0, transformOrigin: 'left' })
+      gsap.set(before, { scale: 1.12, opacity: 1 })
+      gsap.set(after, { scale: 0.78, opacity: 0.3 })
+      gsap.set(arrow, { opacity: 0.25 })
+
+      const tl = gsap.timeline({ defaults: { ease: easeSoft } })
+      tl.to({}, { duration: 1.4 })
+      tl.to('.hero-strike', { scaleX: 1, duration: 0.7, ease: 'power2.out' }, 'morph')
+      tl.to(before, { scale: 0.78, opacity: 0.55, duration: 1.6 }, 'morph+=0.1')
+      tl.to(after, { scale: 1.12, opacity: 1, duration: 1.7 }, 'morph+=0.2')
+      tl.to(arrow, { opacity: 1, duration: 1.2 }, 'morph+=0.3')
+      if (el) tl.call(() => counterUp(el, 15, 1.35), [], 'morph+=0.4')
+    }
+
+    function playPipe(animate = true) {
+      const steps = gsap.utils.toArray<HTMLElement>('.pipe-step')
+      const fill = document.querySelector<HTMLElement>('.pipe-fill')
+      const n = steps.length || 1
+
+      if (animate) {
+        steps.forEach((step, i) => step.classList.toggle('is-lit', i === 0))
+        gsap.set(steps[0], { opacity: 1, y: 0, overwrite: true })
+        gsap.set(steps.slice(1), { opacity: 0.45, y: 0, overwrite: true })
+        if (fill) gsap.set(fill, { scaleX: 1 / n })
+
+        // Hold with only the first lit, then light 02→05 every 3s
+        const hold = 3
+        const gap = 3
+        const tl = gsap.timeline()
+        tl.to({}, { duration: hold })
+
+        steps.slice(1).forEach((step, i) => {
+          const at = hold + i * gap
+          tl.fromTo(
+            step,
+            { y: 22, clipPath: 'inset(30% 0 0 0 round 8px)' },
+            {
+              opacity: 1,
+              y: 0,
+              clipPath: 'inset(0% 0 0 0 round 8px)',
+              duration: 0.9,
+              ease: easeSoft,
+              clearProps: settle,
+              onStart: () => step.classList.add('is-lit'),
+            },
+            at
+          )
+          if (fill) tl.to(fill, { scaleX: (i + 2) / n, duration: 0.9, ease: easeSoft }, at)
+        })
+      } else {
+        steps.forEach((step) => step.classList.add('is-lit'))
+        gsap.set(steps, { opacity: 1, clearProps: settle })
+        if (fill) gsap.set(fill, { scaleX: 1 })
+      }
     }
 
     function playBench(animate = true) {
       gsap.utils.toArray<HTMLElement>('.bench-row').forEach((row, i) => {
         const numEl = row.querySelector<HTMLElement>('.bench-num')
         const target = Number(numEl?.dataset.target || '0')
-        wipeIn(row, i * 0.12, animate)
+        wipeIn(row, i * 0.14, animate)
         if (numEl) {
-          if (animate) counterUp(numEl, target, 1.05, i * 0.12 + 0.15)
+          if (animate) counterUp(numEl, target, 1.05, i * 0.14 + 0.15)
           else setCounter(numEl, target)
         }
       })
@@ -208,7 +291,7 @@ export default function Page() {
       if (strike) gsap.set(strike, { scaleX: 0, transformOrigin: 'left center' })
 
       const tl = gsap.timeline()
-      tl.to({}, { duration: 0.4 })
+      tl.to({}, { duration: 0.5 })
       if (strike) tl.to(strike, { scaleX: 1, duration: 0.55, ease: 'power2.out' })
       if (sec) tl.call(() => counterUp(sec, 15, 1.05), [], '<0.12')
       if (mult) tl.call(() => counterUp(mult, 28, 1.05), [], '<0.2')
@@ -220,12 +303,11 @@ export default function Page() {
         const numEl = row.querySelector<HTMLElement>('.vol-num')
         const target = Number(fill?.dataset.pct || '0')
         const value = Number(numEl?.dataset.val || '0')
+        wipeIn(row, i * 0.1, animate)
         if (animate) {
-          wipeIn(row, i * 0.1, true)
-          if (fill) gsap.to(fill, { scaleX: target / 100, duration: 1.25, delay: i * 0.1 + 0.12, ease: easeSoft })
+          if (fill) gsap.fromTo(fill, { scaleX: 0 }, { scaleX: target / 100, duration: 1.25, delay: i * 0.1 + 0.12, ease: easeSoft })
           if (numEl) counterUp(numEl, value, 1.15, i * 0.1 + 0.12)
         } else {
-          wipeIn(row, 0, false)
           if (fill) gsap.set(fill, { scaleX: target / 100 })
           if (numEl) setCounter(numEl, value)
         }
@@ -234,18 +316,25 @@ export default function Page() {
 
     function playDecision(animate = true) {
       gsap.utils.toArray<HTMLElement>('.decide-col').forEach((col, i) => {
-        wipeIn(col, 0.16 + i * 0.12, animate)
+        riseIn(col, 0.18 + i * 0.14, animate)
       })
     }
 
     function playClose(animate = true) {
       const el = document.querySelector<HTMLElement>('.close-counter')
+      const words = gsap.utils.toArray<HTMLElement>('.close-thesis .w')
       if (el) {
-        if (animate) counterUp(el, 2800, 1.6)
+        if (animate) counterUp(el, 2800, 1.6, 0.4)
         else setCounter(el, 2800)
       }
+      if (animate) {
+        words.forEach((w) => w.classList.remove('on'))
+        words.forEach((w, i) => gsap.delayedCall(0.35 + i * 0.07, () => w.classList.add('on')))
+      } else {
+        words.forEach((w) => w.classList.add('on'))
+      }
       gsap.utils.toArray<HTMLElement>('.close-card').forEach((c, i) => {
-        wipeIn(c, 0.28 + i * 0.12, animate)
+        riseIn(c, 0.32 + i * 0.14, animate)
       })
     }
 
@@ -255,25 +344,30 @@ export default function Page() {
       const panel = panels[index]
       if (!panel) return
       const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
+      const lines = panel.querySelectorAll<HTMLElement>('.h-mask > span')
       const firstVisit = !played.has(index)
       played.add(index)
 
-      panel.classList.add('is-in')
       gsap.fromTo(els,
-        { opacity: 0, y: 46, scale: 0.96, clipPath: 'inset(22% 0 0 0 round 8px)' },
+        { opacity: 0, y: 46, scale: 0.96, filter: 'blur(6px)', clipPath: 'inset(22% 0 0 0 round 8px)' },
         {
           opacity: 1,
           y: 0,
           scale: 1,
+          filter: 'blur(0px)',
           clipPath: 'inset(0% 0 0 0 round 8px)',
           duration: 1.15,
           stagger: 0.09,
           ease: easeSoft,
           overwrite: true,
+          clearProps: settle,
         }
       )
-      const squares = panel.querySelectorAll<HTMLElement>('.kicker-sq')
-      gsap.fromTo(squares,
+      gsap.fromTo(lines,
+        { yPercent: 105 },
+        { yPercent: 0, duration: 1.2, delay: 0.08, stagger: 0.1, ease: easeSoft, overwrite: true }
+      )
+      gsap.fromTo(panel.querySelectorAll<HTMLElement>('.kicker-sq'),
         { rotate: -180, scale: 0 },
         { rotate: 0, scale: 1, duration: 0.9, delay: 0.15, stagger: 0.08, ease: 'back.out(1.6)', overwrite: true }
       )
@@ -283,14 +377,19 @@ export default function Page() {
     function animatePanelOut(index: number, direction: 1 | -1) {
       const panel = panels[index]
       if (!panel) return
-      panel.classList.remove('is-in')
-      const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
-      gsap.to(els, {
+      gsap.to(panel.querySelectorAll<HTMLElement>('.pan-anim'), {
         opacity: 0,
         y: direction > 0 ? -36 : 28,
         scale: 0.98,
         duration: 0.45,
         stagger: 0.03,
+        ease: 'power2.in',
+        overwrite: true,
+      })
+      gsap.to(panel.querySelectorAll<HTMLElement>('.h-mask > span'), {
+        yPercent: -105,
+        duration: 0.45,
+        stagger: 0.04,
         ease: 'power2.in',
         overwrite: true,
       })
@@ -331,10 +430,11 @@ export default function Page() {
       updateChrome(index)
     }
 
-    // Initial state: panel 0 visible
     panels.forEach((panel) => {
-      const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
-      gsap.set(els, { opacity: 0, y: 46, scale: 0.96, clipPath: 'inset(22% 0 0 0 round 8px)' })
+      gsap.set(panel.querySelectorAll<HTMLElement>('.pan-anim'), {
+        opacity: 0, y: 46, scale: 0.96, clipPath: 'inset(22% 0 0 0 round 8px)',
+      })
+      gsap.set(panel.querySelectorAll<HTMLElement>('.h-mask > span'), { yPercent: 105 })
     })
     gsap.set(track, { x: 0 })
     gsap.set(timelineFill, { scaleX: 1 / PANEL_COUNT, transformOrigin: 'left center' })
@@ -363,14 +463,10 @@ export default function Page() {
     window.addEventListener('keydown', onKey)
 
     const onDotClick = (e: Event) => {
-      const btn = (e.currentTarget as HTMLElement)
-      const idx = tlDots.indexOf(btn)
+      const idx = tlDots.indexOf(e.currentTarget as HTMLElement)
       if (idx >= 0) goTo(idx)
     }
-    tlDots.forEach((dot) => {
-      dot.style.cursor = 'pointer'
-      dot.addEventListener('click', onDotClick)
-    })
+    tlDots.forEach((dot) => dot.addEventListener('click', onDotClick))
 
     return () => {
       observer.kill()
@@ -383,16 +479,13 @@ export default function Page() {
   return (
     <div ref={root}>
       <div className="h-wrapper">
-        {/* Ambient field — fills empty space without competing */}
         <div className="h-ambient" aria-hidden>
-          <div className="h-ambient-glow h-ambient-glow-a" />
-          <div className="h-ambient-glow h-ambient-glow-b" />
-          <div className="h-ambient-grid" />
+          <div className="h-ambient-texture" />
+          <div className="h-ambient-grain" />
           <svg className="h-ambient-rings" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
             <circle cx="980" cy="420" r="280" />
             <circle cx="980" cy="420" r="420" />
             <circle cx="160" cy="180" r="200" />
-            <line x1="60" y1="640" x2="320" y2="640" />
           </svg>
         </div>
 
@@ -400,51 +493,53 @@ export default function Page() {
 
           {/* ═══ PANEL 1 — ARCHIVO ═══ */}
           <section className="h-panel h-panel-hero">
-            <div className="pan-inner">
+            <div className="pan-inner pan-inner-hero">
               <p className="pan-anim pan-tag"><span className="kicker-sq" aria-hidden />Webinar</p>
-              <h1 className="pan-anim pan-hero-title">
-                Menos prompts,<br /><span className="pan-hero-em">más lógica</span>
+              <h1 className="hero-blocks">
+                <span className="pan-anim hb hb-1">Menos prompts,</span>
+                <span className="pan-anim hb hb-2">más lógica</span>
+                <span className="pan-anim hb hb-3">Saber cuándo usar IA.</span>
               </h1>
-              <p className="pan-anim pan-hero-sub">
-                Saber cuándo usar IA.
+              <p className="pan-anim hero-case">
+                Un archivo de ~50 partidas se procesaba a mano. <strong>Ese tiempo es el problema.</strong>
               </p>
-              <p className="pan-anim pan-hero-case">
-                Un archivo de ~50 partidas se procesaba a mano. Ese tiempo es el problema.
-              </p>
-              <div className="pan-anim pan-hero-nums">
-                <div className="pan-hero-before">
-                  <span className="pan-hero-label">Manual</span>
-                  <div className="pan-hero-value">
-                    <span className="pan-hero-big pan-hero-big-before">
-                      1.5
-                      <span className="hero-strike" />
-                    </span>
-                    <span className="pan-hero-unit">días</span>
-                  </div>
+              <div className="pan-anim hero-nums">
+                <div className="hero-before">
+                  <span className="hero-label"><span className="hero-label-sq" aria-hidden />Manual</span>
+                  <span className="hero-value">
+                    <span className="hero-big">1.5<span className="hero-strike" /></span>
+                    <span className="hero-unit">días</span>
+                  </span>
                 </div>
-                <span className="pan-hero-arrow">→</span>
-                <div className="pan-hero-after">
-                  <span className="pan-hero-label">Programático</span>
-                  <div className="pan-hero-value">
-                    <span className="pan-hero-big pan-hero-accent pan-hero-big-after">
+                <span className="hero-arrow" aria-hidden>
+                  <svg viewBox="0 0 56 40" fill="none" aria-hidden>
+                    <path d="M4 20h28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M24 8l18 12-18 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M36 8l16 12-16 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity=".35" />
+                  </svg>
+                </span>
+                <div className="hero-after">
+                  <span className="hero-label"><span className="hero-label-sq" aria-hidden />Programático</span>
+                  <span className="hero-value">
+                    <span className="hero-big hero-big-slot">
+                      <span className="hero-big-ghost" aria-hidden>15</span>
                       <span className="hero-sec-counter">0</span>
                     </span>
-                    <span className="pan-hero-unit pan-hero-unit-accent">segundos</span>
-                  </div>
+                    <span className="hero-unit">segundos</span>
+                  </span>
                 </div>
               </div>
-            </div>
-            <div className="pan-scroll-hint pan-anim">
-              <span className="pan-scroll-arrow">→</span> Un scroll = siguiente sección
             </div>
           </section>
 
           {/* ═══ PANEL 2 — PIPELINE ═══ */}
           <section className="h-panel h-panel-pipe">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">01</span> Cómo ayudó la IA</p>
-              <h2 className="pan-anim pan-title">No todas las etapas interpretan.</h2>
-              <p className="pan-anim pan-lead">La IA entra al buscar y recuperar conocimiento. Completar campos y publicar no son el mismo tipo de operación.</p>
+              <Kicker num="01">Cómo ayudó la IA</Kicker>
+              <div className="pan-head">
+                <SlideTitle lead="No todas las etapas" accent="interpretan." />
+                <p className="pan-anim pan-lead">La IA entra al buscar y recuperar conocimiento. Completar campos y publicar no son el mismo tipo de operación.</p>
+              </div>
               <div className="pan-anim pipe-wrap">
                 <div className="pipe-legend">
                   <span><i className="pipe-swatch pipe-swatch-read" /> Interpretar</span>
@@ -457,12 +552,18 @@ export default function Page() {
                     <div
                       key={s.code}
                       className={`pipe-step pipe-step-${s.kind}${i === 0 ? ' is-lit' : ''}`}
-                      style={{ opacity: i === 0 ? 1 : 0.2 }}
+                      style={{ opacity: i === 0 ? 1 : 0.45 }}
                     >
-                      <span className="pipe-code">{s.code}</span>
-                      <span className={`pipe-kind pipe-kind-${s.kind}`}>{s.kindLabel}</span>
-                      <span className="pipe-name">{s.title}</span>
-                      <span className="pipe-desc">{s.body}</span>
+                      <div className="pipe-head">
+                        <b className="pipe-code">{s.code}</b>
+                        <Icon name={s.icon} />
+                      </div>
+                      <div className="pipe-body">
+                        <Pattern kind={s.kind === 'read' ? 'rings' : s.kind === 'rule' ? 'dots' : 'rays'} className="pipe-pat" />
+                        <span className="pipe-kind">{s.kindLabel}</span>
+                        <span className="pipe-name">{s.title}</span>
+                        <span className="pipe-desc">{s.body}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -473,41 +574,45 @@ export default function Page() {
           {/* ═══ PANEL 3 — MEDICIÓN ═══ */}
           <section className="h-panel h-panel-bench">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">02</span> Con IA</p>
-              <h2 className="pan-anim pan-title">La IA llegó hasta los minutos.</h2>
-              <p className="pan-anim pan-lead">Dos optimizaciones seguidas, sobre el mismo archivo. El modelo todavía estaba en el camino.</p>
-              <div className="pan-anim bench-wrap">
+              <Kicker num="02">Con IA</Kicker>
+              <div className="pan-head">
+                <SlideTitle lead="La IA llegó" accent="hasta los minutos." />
+                <p className="pan-anim pan-lead">Dos optimizaciones seguidas, sobre el mismo archivo. El modelo todavía estaba en el camino.</p>
+              </div>
+              <div className="pan-anim bench-box">
+                <Pattern kind="rays" className="bench-pat" />
                 {BENCH_ROWS.map((r, i) => (
                   <div key={i} className="bench-row" style={{ opacity: 0 }}>
-                    <div className="bench-from">
-                      <span className="bench-approach">{r.approach}</span>
-                      <span className="bench-stage">{r.from}</span>
-                      <span className="bench-time">{r.fromTime}</span>
-                    </div>
-                    <span className="bench-arrow">→</span>
-                    <div className="bench-to">
-                      <span className="bench-stage">{r.to}</span>
-                      <span className="bench-time">{r.toTime}</span>
-                    </div>
                     <span className="bench-delta">
                       −<span className="bench-num" data-target={r.delta}>0</span>×
                     </span>
+                    <div className="bench-body">
+                      <span className="bench-approach">{r.approach}</span>
+                      <span className="bench-flow">
+                        <span className="bench-stage">{r.from} <small>{r.fromTime}</small></span>
+                        <span className="bench-arrow" aria-hidden>→</span>
+                        <span className="bench-stage">{r.to} <small>{r.toTime}</small></span>
+                      </span>
+                    </div>
                   </div>
                 ))}
-                <p className="bench-foot pan-anim">
-                  Mismo archivo · ~50 partidas. 1.5 días laborales ≈ 12 h. Hasta aquí, las dos reducciones son con IA.
-                </p>
               </div>
+              <p className="pan-anim bench-foot">
+                Mismo archivo · ~50 partidas. 1.5 días laborales ≈ 12 h. Hasta aquí, las dos reducciones son con IA.
+              </p>
             </div>
           </section>
 
           {/* ═══ PANEL 4 — CÓDIGO ═══ */}
           <section className="h-panel h-panel-code">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">03</span> Con código</p>
-              <h2 className="pan-anim pan-title">Después, el tiempo cambió de escala.</h2>
-              <p className="pan-anim pan-lead">La regla ya era explícita. El mismo archivo salió de los minutos.</p>
-              <div className="pan-anim code-stage">
+              <Kicker num="03">Con código</Kicker>
+              <div className="pan-head">
+                <SlideTitle lead="Después, el tiempo" accent="cambió de escala." />
+                <p className="pan-anim pan-lead">La regla ya era explícita. El mismo archivo salió de los minutos.</p>
+              </div>
+              <div className="pan-anim code-card">
+                <Pattern kind="rays" className="code-pat" />
                 <div className="code-from">
                   <span className="code-k">Agosto · con IA</span>
                   <div className="code-value">
@@ -518,20 +623,24 @@ export default function Page() {
                     <span className="code-unit">min</span>
                   </div>
                 </div>
-                <span className="code-arrow" aria-hidden>→</span>
+                <span className="code-arrow" aria-hidden>
+                  <svg viewBox="0 0 56 40" fill="none" aria-hidden>
+                    <path d="M4 20h28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M24 8l18 12-18 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M36 8l16 12-16 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity=".35" />
+                  </svg>
+                </span>
                 <div className="code-to">
                   <span className="code-k code-k-accent">Programático</span>
                   <div className="code-value">
-                    <span className="code-to-num">
-                      <span className="code-sec-counter">0</span>
-                    </span>
+                    <span className="code-to-num"><span className="code-sec-counter">0</span></span>
                     <span className="code-unit code-unit-accent">segundos</span>
                   </div>
-                  <p className="code-mult">
-                    −<span className="code-mult-counter">0</span>×
-                    <span className="code-mult-label">sobre la etapa con IA</span>
-                  </p>
                 </div>
+                <p className="code-mult">
+                  <b>−<span className="code-mult-counter">0</span>×</b>
+                  <span className="code-mult-label">sobre la etapa con IA</span>
+                </p>
               </div>
               <p className="pan-anim bench-foot">
                 Mismo archivo · ~50 partidas. ~28× usa el extremo de 7 min dentro de 6–7 min.
@@ -539,14 +648,16 @@ export default function Page() {
             </div>
           </section>
 
-          {/* ═══ PANEL 5 — VOLUME ═══ */}
+          {/* ═══ PANEL 5 — VOLUMEN ═══ */}
           <section className="h-panel h-panel-vol">
-            <div className="pan-inner pan-inner-vol">
-              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">04</span> Volumen observado</p>
-              <h2 className="pan-anim pan-title pan-title-vol">Creció lo que se podía procesar.</h2>
-              <p className="pan-anim pan-lead pan-lead-vol">
-                De 0.6 a un pico de 189 archivos por día, <span className="text-accent">~315×</span>. Es capacidad, no precisión.
-              </p>
+            <div className="pan-inner">
+              <Kicker num="04">Volumen observado</Kicker>
+              <div className="pan-head">
+                <SlideTitle lead="Creció lo que" accent="se podía procesar." />
+                <p className="pan-anim pan-lead">
+                  De 0.6 a un pico de 189 archivos por día, <span className="text-accent">~315×</span>. Es capacidad, no precisión.
+                </p>
+              </div>
               <div className="pan-anim vol-wrap">
                 {VOL_ROWS.map((r, i) => {
                   const speed = Math.max(1.0, 2.8 - i * 0.4)
@@ -586,28 +697,26 @@ export default function Page() {
             </div>
           </section>
 
-          {/* ═══ PANEL 5 — CRITERIO ═══ */}
+          {/* ═══ PANEL 6 — CRITERIO ═══ */}
           <section className="h-panel h-panel-decide">
             <div className="pan-inner">
-              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">05</span> Cómo decidir</p>
-              <h2 className="pan-anim pan-title">Cuándo IA, cuándo código.</h2>
-              <p className="pan-anim pan-lead">Una guía para este tipo de problema. No es una ley.</p>
-              <div className="pan-anim decide-cols">
-                <article className="decide-col is-ai" style={{ opacity: 0 }}>
-                  <span className="decide-k">IA</span>
-                  <h3 className="decide-t">Cuando hay que interpretar</h3>
-                  <p className="decide-b">Lenguaje natural, información variable, documentos sin estructura fija o ambigüedad.</p>
-                </article>
-                <article className="decide-col is-code" style={{ opacity: 0 }}>
-                  <span className="decide-k">Código</span>
-                  <h3 className="decide-t">Cuando la regla ya está escrita</h3>
-                  <p className="decide-b">Entradas y salidas conocidas, y operaciones que pueden expresarse como instrucciones verificables.</p>
-                </article>
-                <article className="decide-col is-hybrid" style={{ opacity: 0 }}>
-                  <span className="decide-k">Ambos</span>
-                  <h3 className="decide-t">Cuando hacen falta las dos</h3>
-                  <p className="decide-b">La IA interpreta. El código aporta control, validación y repetibilidad.</p>
-                </article>
+              <Kicker num="05">Cómo decidir</Kicker>
+              <div className="pan-head">
+                <SlideTitle lead="Cuándo IA," accent="cuándo código." />
+                <p className="pan-anim pan-lead">Una guía para este tipo de problema. No es una&nbsp;ley.</p>
+              </div>
+              <div className="decide-cols">
+                {DECIDE_COLS.map((c) => (
+                  <article key={c.k} className={`decide-col decide-col--${c.tone}`} style={{ opacity: 0 }}>
+                    <span className="decide-icon"><Icon name={c.icon} /></span>
+                    <div className="decide-body">
+                      <Pattern kind={c.tone === 'a' ? 'rings' : c.tone === 'b' ? 'frame' : 'dots'} className="decide-pat" />
+                      <span className="decide-k">{c.k}</span>
+                      <h3 className="decide-t">{c.t}</h3>
+                      <p className="decide-b">{c.b}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
               <p className="pan-anim decide-rule">
                 Usa IA cuando aporte capacidad de interpretación. Usa código cuando las reglas sean explícitas. Combina ambos cuando el problema necesite las dos capacidades.
@@ -615,48 +724,54 @@ export default function Page() {
             </div>
           </section>
 
-          {/* ═══ PANEL 6 — RESULTADO ═══ */}
+          {/* ═══ PANEL 7 — RESULTADO ═══ */}
           <section className="h-panel h-panel-close">
-            <div className="pan-inner pan-inner-center pan-inner-close">
-              <p className="pan-anim pan-kicker"><span className="kicker-sq" aria-hidden /><span className="pan-kicker-num">06</span> El resultado</p>
-              <p className="pan-anim close-thesis">
-                La IA permitió acelerar el proceso; la optimización programática permitió llevarlo todavía más lejos.
-              </p>
-              <div className="pan-anim close-hero">
-                <span className="close-approx">~</span>
-                <span className="close-counter">0</span><span className="close-x">×</span>
-              </div>
-              <div className="pan-anim close-cards">
-                {[
-                  { k: 'Con IA', t: '1.5 días → 6–7 min' },
-                  { k: 'Con código', t: '6–7 min → 15 s' },
-                  { k: 'En operación', t: '0.6 → 189 / día' },
-                ].map((c) => (
-                  <article key={c.k} className="close-card" style={{ opacity: 0 }}>
-                    <span className="close-card-k">{c.k}</span>
-                    <h3 className="close-card-t">{c.t}</h3>
-                  </article>
-                ))}
+            <div className="pan-inner">
+              <Kicker num="06">El resultado</Kicker>
+              <div className="close-bento">
+                <div className="pan-anim close-main">
+                  <Pattern kind="rays" className="close-pat" />
+                  <p className="close-thesis">
+                    {THESIS.split(' ').map((w, i) => (
+                      <span key={i} className={`w${THESIS_HL.has(w) ? ' hl' : ''}`}>{w} </span>
+                    ))}
+                  </p>
+                  <div className="close-hero">
+                    <span className="close-approx">~</span>
+                    <span className="close-counter">0</span>
+                    <span className="close-x">×</span>
+                  </div>
+                </div>
+                <div className="close-rows">
+                  {CLOSE_ROWS.map((c) => (
+                    <article key={c.k} className="close-card" style={{ opacity: 0 }}>
+                      <span className="close-card-icon"><Icon name={c.icon} /></span>
+                      <span className="close-card-body">
+                        <span className="close-card-k">{c.k}</span>
+                        <span className="close-card-t">{c.t}</span>
+                      </span>
+                    </article>
+                  ))}
+                </div>
               </div>
               <p className="pan-anim close-quote">
-                La mejor solución no es la que utiliza más IA, sino la que resuelve mejor el problema.
+                La mejor solución no es la que utiliza más&nbsp;IA, <span>sino la que resuelve mejor el problema.</span>
               </p>
             </div>
           </section>
 
         </div>
 
-        <div className="tl-bar">
-          <div className="tl-track"><div className="tl-fill" /></div>
+        <div className="tl-track"><div className="tl-fill" /></div>
+        <nav className="tl-bar" aria-label="Secciones">
           <div className="tl-dots">
             {NAV.map((l, i) => (
               <button key={l} type="button" className={`tl-dot${i === 0 ? ' is-active' : ''}`}>
-                <span className="tl-pip" />
                 <span className="tl-label">{l}</span>
               </button>
             ))}
           </div>
-        </div>
+        </nav>
       </div>
     </div>
   )
