@@ -187,7 +187,6 @@ export default function Page() {
     }
 
     function playHero(animate = true) {
-      const el = document.querySelector<HTMLElement>('.hero-sec-counter')
       const before = document.querySelector<HTMLElement>('.hero-before')
       const after = document.querySelector<HTMLElement>('.hero-after')
       const arrow = document.querySelector<HTMLElement>('.hero-arrow')
@@ -197,27 +196,22 @@ export default function Page() {
       gsap.set(after, { transformOrigin: 'left bottom' })
 
       if (!animate) {
-        if (el) setCounter(el, 15)
-        gsap.set('.hero-strike', { scaleX: 1, transformOrigin: 'left' })
-        gsap.set(before, { scale: 0.78, opacity: 0.55 })
-        gsap.set(after, { scale: 1.12, opacity: 1 })
+        gsap.set(before, { scale: 0.76, opacity: 0.5 })
+        gsap.set(after, { scale: 1.18, opacity: 1 })
         gsap.set(arrow, { opacity: 1 })
         return
       }
 
-      if (el) el.textContent = '0'
-      gsap.set('.hero-strike', { scaleX: 0, transformOrigin: 'left' })
-      gsap.set(before, { scale: 1.12, opacity: 1 })
-      gsap.set(after, { scale: 0.78, opacity: 0.3 })
-      gsap.set(arrow, { opacity: 0.25 })
+      // Start with Manual large; then it yields while the question grows
+      gsap.set(before, { scale: 1.22, opacity: 1 })
+      gsap.set(after, { scale: 0.68, opacity: 0.22 })
+      gsap.set(arrow, { opacity: 0.18 })
 
       const tl = gsap.timeline({ defaults: { ease: easeSoft } })
-      tl.to({}, { duration: 1.4 })
-      tl.to('.hero-strike', { scaleX: 1, duration: 0.7, ease: 'power2.out' }, 'morph')
-      tl.to(before, { scale: 0.78, opacity: 0.55, duration: 1.6 }, 'morph+=0.1')
-      tl.to(after, { scale: 1.12, opacity: 1, duration: 1.7 }, 'morph+=0.2')
-      tl.to(arrow, { opacity: 1, duration: 1.2 }, 'morph+=0.3')
-      if (el) tl.call(() => counterUp(el, 15, 1.35), [], 'morph+=0.4')
+      tl.to({}, { duration: 1.55 })
+      tl.to(before, { scale: 0.76, opacity: 0.5, duration: 1.85 }, 'morph')
+      tl.to(after, { scale: 1.18, opacity: 1, duration: 2 }, 'morph+=0.08')
+      tl.to(arrow, { opacity: 1, duration: 1.35 }, 'morph+=0.18')
     }
 
     function playPipe(animate = true) {
@@ -227,8 +221,9 @@ export default function Page() {
 
       if (animate) {
         steps.forEach((step, i) => step.classList.toggle('is-lit', i === 0))
-        gsap.set(steps[0], { opacity: 1, y: 0, overwrite: true })
-        gsap.set(steps.slice(1), { opacity: 0.45, y: 0, overwrite: true })
+        // Keep full copy readable on waiting cards — no clipPath (it ate titles/desc)
+        gsap.set(steps[0], { opacity: 1, y: 0, clipPath: 'none', overwrite: true })
+        gsap.set(steps.slice(1), { opacity: 0.72, y: 0, clipPath: 'none', overwrite: true })
         if (fill) gsap.set(fill, { scaleX: 1 / n })
 
         // Hold with only the first lit, then light 02→05 every 3s
@@ -239,16 +234,12 @@ export default function Page() {
 
         steps.slice(1).forEach((step, i) => {
           const at = hold + i * gap
-          tl.fromTo(
+          tl.to(
             step,
-            { y: 22, clipPath: 'inset(30% 0 0 0 round 8px)' },
             {
               opacity: 1,
-              y: 0,
-              clipPath: 'inset(0% 0 0 0 round 8px)',
-              duration: 0.9,
+              duration: 0.75,
               ease: easeSoft,
-              clearProps: settle,
               onStart: () => step.classList.add('is-lit'),
             },
             at
@@ -257,7 +248,7 @@ export default function Page() {
         })
       } else {
         steps.forEach((step) => step.classList.add('is-lit'))
-        gsap.set(steps, { opacity: 1, clearProps: settle })
+        gsap.set(steps, { opacity: 1, clipPath: 'none', clearProps: settle })
         if (fill) gsap.set(fill, { scaleX: 1 })
       }
     }
@@ -343,12 +334,15 @@ export default function Page() {
     function animatePanelIn(index: number) {
       const panel = panels[index]
       if (!panel) return
-      const els = panel.querySelectorAll<HTMLElement>('.pan-anim')
+      const els = Array.from(panel.querySelectorAll<HTMLElement>('.pan-anim'))
+      // hero-nums scales children past its box — clipPath would eat the "?"
+      const clipped = els.filter((el) => !el.classList.contains('no-clip'))
+      const unclipped = els.filter((el) => el.classList.contains('no-clip'))
       const lines = panel.querySelectorAll<HTMLElement>('.h-mask > span')
       const firstVisit = !played.has(index)
       played.add(index)
 
-      gsap.fromTo(els,
+      gsap.fromTo(clipped,
         { opacity: 0, y: 46, scale: 0.96, filter: 'blur(6px)', clipPath: 'inset(22% 0 0 0 round 8px)' },
         {
           opacity: 1,
@@ -363,6 +357,23 @@ export default function Page() {
           clearProps: settle,
         }
       )
+      if (unclipped.length) {
+        gsap.set(unclipped, { clipPath: 'none' })
+        gsap.fromTo(unclipped,
+          { opacity: 0, y: 46, filter: 'blur(6px)' },
+          {
+            opacity: 1,
+            y: 0,
+            filter: 'blur(0px)',
+            duration: 1.15,
+            stagger: 0.09,
+            delay: clipped.length ? Math.min(clipped.length, 4) * 0.09 : 0,
+            ease: easeSoft,
+            overwrite: true,
+            clearProps: 'transform,filter,clipPath',
+          }
+        )
+      }
       gsap.fromTo(lines,
         { yPercent: 105 },
         { yPercent: 0, duration: 1.2, delay: 0.08, stagger: 0.1, ease: easeSoft, overwrite: true }
@@ -431,9 +442,13 @@ export default function Page() {
     }
 
     panels.forEach((panel) => {
-      gsap.set(panel.querySelectorAll<HTMLElement>('.pan-anim'), {
+      const anims = Array.from(panel.querySelectorAll<HTMLElement>('.pan-anim'))
+      const clippedInit = anims.filter((el) => !el.classList.contains('no-clip'))
+      const unclippedInit = anims.filter((el) => el.classList.contains('no-clip'))
+      gsap.set(clippedInit, {
         opacity: 0, y: 46, scale: 0.96, clipPath: 'inset(22% 0 0 0 round 8px)',
       })
+      gsap.set(unclippedInit, { opacity: 0, y: 46, clipPath: 'none' })
       gsap.set(panel.querySelectorAll<HTMLElement>('.h-mask > span'), { yPercent: 105 })
     })
     gsap.set(track, { x: 0 })
@@ -489,6 +504,14 @@ export default function Page() {
           </svg>
         </div>
 
+        <img
+          className="fm-logo"
+          src="/futuremeets-logo.png"
+          alt="Future Meets"
+          width={104}
+          height={36}
+        />
+
         <div className="h-track">
 
           {/* ═══ PANEL 1 — ARCHIVO ═══ */}
@@ -503,11 +526,11 @@ export default function Page() {
               <p className="pan-anim hero-case">
                 Un archivo de ~50 partidas se procesaba a mano. <strong>Ese tiempo es el problema.</strong>
               </p>
-              <div className="pan-anim hero-nums">
+              <div className="pan-anim no-clip hero-nums">
                 <div className="hero-before">
                   <span className="hero-label"><span className="hero-label-sq" aria-hidden />Manual</span>
                   <span className="hero-value">
-                    <span className="hero-big">1.5<span className="hero-strike" /></span>
+                    <span className="hero-big">1.5</span>
                     <span className="hero-unit">días</span>
                   </span>
                 </div>
@@ -519,13 +542,21 @@ export default function Page() {
                   </svg>
                 </span>
                 <div className="hero-after">
-                  <span className="hero-label"><span className="hero-label-sq" aria-hidden />Programático</span>
+                  <span className="hero-label"><span className="hero-label-sq" aria-hidden />La pregunta</span>
                   <span className="hero-value">
-                    <span className="hero-big hero-big-slot">
-                      <span className="hero-big-ghost" aria-hidden>15</span>
-                      <span className="hero-sec-counter">0</span>
+                    <span className="hero-big hero-big-q" aria-label="?">
+                      <svg viewBox="0 0 72 110" fill="none" aria-hidden>
+                        <path
+                          d="M20 34c0-10.5 8-18.5 16-18.5s16 8 16 18.5c0 7-3.6 11.4-9.8 16-5.6 4.2-10.7 9-10.7 17.8v2.5"
+                          stroke="currentColor"
+                          strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <circle cx="36" cy="92" r="6" fill="currentColor" />
+                      </svg>
                     </span>
-                    <span className="hero-unit">segundos</span>
+                    <span className="hero-unit">hasta dónde</span>
                   </span>
                 </div>
               </div>
@@ -535,10 +566,10 @@ export default function Page() {
           {/* ═══ PANEL 2 — PIPELINE ═══ */}
           <section className="h-panel h-panel-pipe">
             <div className="pan-inner">
-              <Kicker num="01">Cómo ayudó la IA</Kicker>
+              <Kicker num="01">El proceso</Kicker>
               <div className="pan-head">
                 <SlideTitle lead="No todas las etapas" accent="interpretan." />
-                <p className="pan-anim pan-lead">La IA entra al buscar y recuperar conocimiento. Completar campos y publicar no son el mismo tipo de operación.</p>
+                <p className="pan-anim pan-lead">Antes de optimizar, hay que ver qué partes necesitan juicio… y cuáles no. Completar campos y publicar no son el mismo tipo de operación.</p>
               </div>
               <div className="pan-anim pipe-wrap">
                 <div className="pipe-legend">
@@ -577,7 +608,7 @@ export default function Page() {
               <Kicker num="02">Con IA</Kicker>
               <div className="pan-head">
                 <SlideTitle lead="La IA llegó" accent="hasta los minutos." />
-                <p className="pan-anim pan-lead">Dos optimizaciones seguidas, sobre el mismo archivo. El modelo todavía estaba en el camino.</p>
+                <p className="pan-anim pan-lead">La IA sí funcionó. Dos saltos. Mismo archivo. Todavía con el modelo en el camino.</p>
               </div>
               <div className="pan-anim bench-box">
                 <Pattern kind="rays" className="bench-pat" />
@@ -598,7 +629,7 @@ export default function Page() {
                 ))}
               </div>
               <p className="pan-anim bench-foot">
-                Mismo archivo · ~50 partidas. 1.5 días laborales ≈ 12 h. Hasta aquí, las dos reducciones son con IA.
+                Mismo archivo · ~50 partidas. Llegamos a minutos. Y ahí se acabó el margen fácil.
               </p>
             </div>
           </section>
@@ -609,7 +640,7 @@ export default function Page() {
               <Kicker num="03">Con código</Kicker>
               <div className="pan-head">
                 <SlideTitle lead="Después, el tiempo" accent="cambió de escala." />
-                <p className="pan-anim pan-lead">La regla ya era explícita. El mismo archivo salió de los minutos.</p>
+                <p className="pan-anim pan-lead">Cuando la regla ya estaba escrita, el modelo sobraba en esa parte. El mismo archivo salió de los minutos.</p>
               </div>
               <div className="pan-anim code-card">
                 <Pattern kind="rays" className="code-pat" />
@@ -653,9 +684,9 @@ export default function Page() {
             <div className="pan-inner">
               <Kicker num="04">Volumen observado</Kicker>
               <div className="pan-head">
-                <SlideTitle lead="Creció lo que" accent="se podía procesar." />
+                <SlideTitle lead="Con menos tiempo," accent="creció lo procesable." />
                 <p className="pan-anim pan-lead">
-                  De 0.6 a un pico de 189 archivos por día, <span className="text-accent">~315×</span>. Es capacidad, no precisión.
+                  De 0.6 a un pico de 189 archivos por día — <span className="text-accent">~315×</span>. Es capacidad, no precisión.
                 </p>
               </div>
               <div className="pan-anim vol-wrap">
@@ -703,7 +734,7 @@ export default function Page() {
               <Kicker num="05">Cómo decidir</Kicker>
               <div className="pan-head">
                 <SlideTitle lead="Cuándo IA," accent="cuándo código." />
-                <p className="pan-anim pan-lead">Una guía para este tipo de problema. No es una&nbsp;ley.</p>
+                <p className="pan-anim pan-lead">La pregunta no es «¿usamos IA?». Es «¿esta etapa interpreta o ya tiene regla?». No es una&nbsp;ley.</p>
               </div>
               <div className="decide-cols">
                 {DECIDE_COLS.map((c) => (
